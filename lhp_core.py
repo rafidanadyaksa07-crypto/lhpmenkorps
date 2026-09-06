@@ -20,7 +20,11 @@ from datetime import datetime
 
 import openpyxl
 from docx import Document
-from docx.shared import Cm
+from docx.shared import Cm, Pt
+from docx.enum.text import WD_ALIGN_PARAGRAPH
+from docx.enum.table import WD_TABLE_ALIGNMENT
+from docx.oxml.ns import qn
+from docx.oxml import OxmlElement
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 EXCEL_PATH = os.path.join(BASE_DIR, "DATA_DANTONTAR_DANKITAR.xlsx")
@@ -352,29 +356,88 @@ def _replace_everywhere(doc, values):
                                 _replace_in_paragraph(p2, values)
 
 
-def _insert_photos(doc, photo_paths, max_height_cm=5.0):
-    marker_text = "{{LAMPIRAN_FOTO}}"
+def _insert_photos(doc, photo_paths, cols=2):
+    """
+    Lay photos out in a borderless grid.
+
+    The previous approach appended every picture to one paragraph at a fixed
+    height. With mixed aspect ratios (portrait phone shots next to landscape
+    screenshots) the wide ones overflowed their line and visibly overlapped
+    the next photo. Here each image is scaled to FIT INSIDE a fixed box,
+    preserving its aspect ratio, and each sits in its own table cell.
+    """
+    marker = "{{LAMPIRAN_FOTO}}"
+    target = None
     for p in doc.paragraphs:
-        if any(marker_text in r.text for r in p.runs):
-            for r in p.runs:
-                r.text = r.text.replace(marker_text, "")
-            for path in photo_paths:
-                run = p.add_run()
-                try:
-                    run.add_picture(path, height=Cm(max_height_cm))
-                    p.add_run("   ")
-                except Exception:
-                    continue
-            return
-    # marker not found (shouldn't happen) -- append at end as fallback
-    p = doc.add_paragraph()
-    for path in photo_paths:
-        run = p.add_run()
+        if any(marker in r.text for r in p.runs):
+            target = p
+            break
+
+    if target is None:
+        return
+    for r in target.runs:
+        r.text = r.text.replace(marker, "")
+
+    if not photo_paths:
+        return
+
+    BOX_W_CM, BOX_H_CM = 7.2, 7.0      # per-cell picture box
+
+    rows = (len(photo_paths) + cols - 1) // cols
+    table = doc.add_table(rows=rows, cols=cols)
+    table.alignment = WD_TABLE_ALIGNMENT.CENTER
+    table.autofit = False
+    _remove_table_borders(table)
+
+    col_w = Cm(BOX_W_CM + 0.4)
+    for row in table.rows:
+        for c in row.cells:
+            c.width = col_w
+
+    for idx, path in enumerate(photo_paths):
+        cell = table.rows[idx // cols].cells[idx % cols]
+        cell.width = col_w
+        for p in list(cell.paragraphs):
+            p._element.getparent().remove(p._element)
+        para = cell.add_paragraph()
+        para.alignment = WD_ALIGN_PARAGRAPH.CENTER
+        para.paragraph_format.space_after = Pt(8)
+        para.paragraph_format.space_before = Pt(4)
+
+        width_cm, height_cm = _fit_box(path, BOX_W_CM, BOX_H_CM)
         try:
-            run.add_picture(path, height=Cm(max_height_cm))
-            p.add_run("   ")
+            para.add_run().add_picture(path, width=Cm(width_cm), height=Cm(height_cm))
         except Exception:
             continue
+
+    # move the grid to where the marker paragraph is
+    target._p.addnext(table._tbl)
+
+
+def _fit_box(path, box_w_cm, box_h_cm):
+    """Scale an image to fit inside the box while keeping its aspect ratio."""
+    try:
+        from PIL import Image
+        with Image.open(path) as im:
+            w, h = im.size
+        if not w or not h:
+            raise ValueError
+        scale = min(box_w_cm / w, box_h_cm / h)
+        return w * scale, h * scale
+    except Exception:
+        # unknown dimensions: fall back to a 4:3 landscape box
+        return box_w_cm, box_w_cm * 0.75
+
+
+def _remove_table_borders(table):
+    tblPr = table._tbl.tblPr
+    borders = OxmlElement('w:tblBorders')
+    for edge in ('top', 'left', 'bottom', 'right', 'insideH', 'insideV'):
+        el = OxmlElement('w:' + edge)
+        el.set(qn('w:val'), 'none')
+        el.set(qn('w:sz'), '0')
+        borders.append(el)
+    tblPr.append(borders)
 
 
 def generate_document(form, photo_paths, output_path):
