@@ -1,0 +1,456 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Buat LHP — LHP AKPOL</title>
+<link rel="icon" href="/static/logo_akpol.png">
+<link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="topbar-inner">
+      <div class="brand"><img src="/static/logo_akpol.png" alt=""> LHP AKPOL</div>
+      <div class="right">
+        <span class="who">{{ user.nama }}</span>
+        <a href="/logout">Keluar</a>
+      </div>
+    </div>
+  </header>
+
+  <main class="wrap">
+
+    {% if defaults %}
+    <div class="notice notice-ok" id="prefill-notice">
+      Data diri dan satuan diisi dari laporan terakhir Anda.
+      <button type="button" class="linkish" id="clear-prefill"
+              style="color:inherit; margin-left:6px;">Kosongkan</button>
+    </div>
+    {% endif %}
+
+    <div class="progress" aria-hidden="true">
+      <span class="progress-count" id="progress-count"></span>
+      <div class="progress-track"><div class="progress-fill" id="progress-fill"></div></div>
+    </div>
+
+    <!-- ===== 1. FOTO ===== -->
+    <section class="card">
+      <div class="section-head"><span class="step">1</span><h2>Foto dokumentasi</h2></div>
+
+      <div class="dropzone" id="dropzone" tabindex="0" role="button"
+           aria-label="Pilih atau jatuhkan foto dokumentasi">
+        <div class="dropzone-icon">
+          <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+               stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <rect x="3" y="4" width="18" height="16" rx="2"/>
+            <circle cx="8.5" cy="9.5" r="1.5"/><path d="M21 15l-5-5L5 20"/>
+          </svg>
+        </div>
+        <div class="dropzone-title">Jatuhkan foto di sini, atau klik untuk memilih</div>
+        <div class="dropzone-sub">JPG, PNG, atau HEIC &middot; bisa pilih beberapa sekaligus</div>
+      </div>
+      <input type="file" id="foto" accept="image/*" multiple hidden>
+
+      <div class="photo-grid" id="photo-grid"></div>
+
+      <div class="upload-summary" id="upload-summary" hidden>
+        <span id="upload-count"></span>
+        <button type="button" class="linkish" id="clear-photos">Hapus semua foto</button>
+      </div>
+      <p class="muted" id="upload-order-hint" hidden>
+        Foto muncul di dokumen sesuai nomor urut di bawah.
+      </p>
+    </section>
+
+    <form id="lhp-form" novalidate>
+
+      <!-- ===== 2. SATUAN ===== -->
+      <section class="card">
+        <div class="section-head"><span class="step">2</span><h2>Satuan</h2></div>
+
+        <div class="grid-3">
+          <div>
+            <label for="tingkat">Tingkat <span class="req">*</span></label>
+            <select name="tingkat" id="tingkat" data-required>
+              <option value="">Pilih tingkat</option>
+              {% for t in tingkat_list %}
+              <option value="{{ t.value }}" {% if defaults.tingkat == t.value %}selected{% endif %}>
+                Tingkat {{ t.label }} &mdash; {{ t.batalyon_nama }}
+              </option>
+              {% endfor %}
+            </select>
+          </div>
+          <div>
+            <label for="kompi">Kompi <span class="req">*</span></label>
+            <select name="kompi" id="kompi" data-required>
+              <option value="">Pilih kompi</option>
+              {% for k in kompi_list %}
+              <option value="{{ k }}" {% if defaults.kompi == k %}selected{% endif %}>Kompi {{ k }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div>
+            <label for="peleton">Peleton <span class="req">*</span></label>
+            <select name="peleton" id="peleton" data-required>
+              <option value="">Pilih peleton</option>
+              {% for p in peleton_list %}
+              <option value="{{ p }}" {% if defaults.peleton == p %}selected{% endif %}>Peleton {{ p }}</option>
+              {% endfor %}
+            </select>
+          </div>
+        </div>
+
+        <div class="komando">
+          <div class="komando-head">
+            <h3>Data komando</h3>
+            <button type="button" class="linkish" id="edit-toggle">Ubah manual</button>
+          </div>
+          <p class="muted" id="komando-status" role="status">
+            Pilih tingkat, kompi, dan peleton untuk mengisi otomatis.
+          </p>
+
+          <div class="grid-2">
+            <div>
+              <label for="danton_nama">Dantontar &mdash; nama</label>
+              <input type="text" id="danton_nama" name="danton_nama" readonly>
+              <label for="danton_pangkat">Dantontar &mdash; pangkat</label>
+              <input type="text" id="danton_pangkat" name="danton_pangkat" readonly>
+              <label for="danton_nrp">Dantontar &mdash; NRP</label>
+              <input type="text" id="danton_nrp" name="danton_nrp" readonly>
+            </div>
+            <div>
+              <label for="danki_nama">Dankitar &mdash; nama</label>
+              <input type="text" id="danki_nama" name="danki_nama" readonly>
+              <label for="danki_pangkat">Dankitar &mdash; pangkat</label>
+              <input type="text" id="danki_pangkat" name="danki_pangkat" readonly>
+              <label for="danki_nrp">Dankitar &mdash; NRP</label>
+              <input type="text" id="danki_nrp" name="danki_nrp" readonly>
+            </div>
+          </div>
+        </div>
+        <input type="hidden" id="danton_manual" name="danton_manual" value="0">
+        <input type="hidden" id="danki_manual" name="danki_manual" value="0">
+      </section>
+
+      <!-- ===== 3. IDENTITAS ===== -->
+      <section class="card">
+        <div class="section-head"><span class="step">3</span><h2>Identitas taruna</h2></div>
+
+        <div class="grid-2">
+          <div>
+            <label for="nama_taruna">Nama lengkap <span class="req">*</span></label>
+            <input type="text" id="nama_taruna" name="nama_taruna" data-required
+                   value="{{ defaults.nama_taruna or '' }}" autocomplete="name">
+          </div>
+          <div>
+            <label for="no_akademi">Nomor akademi <span class="req">*</span></label>
+            <input type="text" id="no_akademi" name="no_akademi" data-required
+                   value="{{ defaults.no_akademi or '' }}" inputmode="numeric">
+          </div>
+        </div>
+
+        <label for="pangkat">Pangkat <span class="req">*</span></label>
+        <select name="pangkat" id="pangkat" data-required>
+          <option value="">Pilih pangkat</option>
+          {% for p in pangkat_list %}
+          <option value="{{ p }}" {% if defaults.pangkat == p %}selected{% endif %}>{{ p }}</option>
+          {% endfor %}
+        </select>
+      </section>
+
+      <!-- ===== 4. KEGIATAN ===== -->
+      <section class="card">
+        <div class="section-head"><span class="step">4</span><h2>Rincian kegiatan</h2></div>
+
+        <label for="nama_kegiatan">Nama kegiatan <span class="req">*</span></label>
+        <input type="text" id="nama_kegiatan" name="nama_kegiatan" data-required
+               placeholder="Infaq, olahraga pagi, bakti sosial">
+
+        <div class="grid-2">
+          <div>
+            <label for="tanggal">Tanggal <span class="req">*</span></label>
+            <input type="date" id="tanggal" name="tanggal" data-required>
+          </div>
+          <div>
+            <label for="waktu">Waktu (WIB) <span class="req">*</span></label>
+            <input type="time" id="waktu" name="waktu" data-required>
+          </div>
+        </div>
+
+        <label for="tempat">Tempat <span class="req">*</span></label>
+        <input type="text" id="tempat" name="tempat" data-required>
+
+        <label for="lokasi_ttd">Kota pada tanda tangan</label>
+        <input type="text" id="lokasi_ttd" name="lokasi_ttd"
+               value="{{ defaults.lokasi_ttd or 'Semarang' }}">
+      </section>
+
+      <section class="submit-bar">
+        <div id="msg" role="status" aria-live="polite"></div>
+        <button type="submit" class="btn btn-primary btn-block" id="submit-btn">
+          Buat dan unduh dokumen
+        </button>
+      </section>
+    </form>
+  </main>
+
+<script>
+/* ============ photo upload ============
+   Files live in a JS array so a second pick ADDS instead of replacing,
+   and individual photos can be removed. */
+const picked = [];
+const fileInput  = document.getElementById('foto');
+const dropzone   = document.getElementById('dropzone');
+const grid       = document.getElementById('photo-grid');
+const summary    = document.getElementById('upload-summary');
+const countLabel = document.getElementById('upload-count');
+const orderHint  = document.getElementById('upload-order-hint');
+
+const formatSize = b =>
+  b < 1024 ? b + ' B'
+  : b < 1048576 ? (b / 1024).toFixed(0) + ' KB'
+  : (b / 1048576).toFixed(1) + ' MB';
+
+function addFiles(list) {
+  let skipped = 0;
+  for (const file of list) {
+    if (!file.type.startsWith('image/')) { skipped++; continue; }
+    if (!picked.some(f => f.name === file.name && f.size === file.size)) picked.push(file);
+  }
+  renderPhotos();
+  if (skipped) showMsg('error', skipped + ' berkas dilewati karena bukan gambar.');
+}
+
+function renderPhotos() {
+  grid.innerHTML = '';
+  picked.forEach((file, i) => {
+    const item = document.createElement('div');
+    item.className = 'photo-item';
+
+    const img = document.createElement('img');
+    img.src = URL.createObjectURL(file);
+    img.alt = '';
+    img.onload = () => URL.revokeObjectURL(img.src);
+
+    const order = document.createElement('span');
+    order.className = 'photo-order';
+    order.textContent = i + 1;
+
+    const rm = document.createElement('button');
+    rm.type = 'button';
+    rm.className = 'photo-remove';
+    rm.setAttribute('aria-label', 'Hapus foto ' + (i + 1));
+    rm.textContent = '\u00d7';
+    rm.addEventListener('click', () => { picked.splice(i, 1); renderPhotos(); });
+
+    const name = document.createElement('div');
+    name.className = 'photo-name';
+    name.textContent = file.name;
+
+    item.append(img, order, rm, name);
+    grid.appendChild(item);
+  });
+
+  const has = picked.length > 0;
+  summary.hidden = !has;
+  orderHint.hidden = !has;
+  if (has) {
+    const total = picked.reduce((s, f) => s + f.size, 0);
+    countLabel.textContent = picked.length + ' foto \u00b7 ' + formatSize(total);
+  }
+}
+
+dropzone.addEventListener('click', () => fileInput.click());
+dropzone.addEventListener('keydown', e => {
+  if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); fileInput.click(); }
+});
+fileInput.addEventListener('change', e => { addFiles(e.target.files); fileInput.value = ''; });
+
+['dragenter', 'dragover'].forEach(ev =>
+  dropzone.addEventListener(ev, e => { e.preventDefault(); dropzone.classList.add('dragging'); }));
+['dragleave', 'drop'].forEach(ev =>
+  dropzone.addEventListener(ev, e => {
+    e.preventDefault();
+    if (ev === 'dragleave' && dropzone.contains(e.relatedTarget)) return;
+    dropzone.classList.remove('dragging');
+  }));
+dropzone.addEventListener('drop', e => addFiles(e.dataTransfer.files));
+document.getElementById('clear-photos').addEventListener('click', () => {
+  picked.length = 0; renderPhotos();
+});
+
+/* ============ validation + progress ============ */
+const required = [...document.querySelectorAll('[data-required]')];
+const LABELS = {
+  tingkat: 'Tingkat', kompi: 'Kompi', peleton: 'Peleton',
+  nama_taruna: 'Nama lengkap', no_akademi: 'Nomor akademi', pangkat: 'Pangkat',
+  nama_kegiatan: 'Nama kegiatan', tanggal: 'Tanggal', waktu: 'Waktu', tempat: 'Tempat'
+};
+
+function clearError(el) {
+  el.classList.remove('invalid');
+  const next = el.parentNode.querySelector('.field-error');
+  if (next) next.remove();
+}
+function markError(el, text) {
+  clearError(el);
+  el.classList.add('invalid');
+  const span = document.createElement('span');
+  span.className = 'field-error';
+  span.textContent = text;
+  el.insertAdjacentElement('afterend', span);
+}
+function updateProgress() {
+  const filled = required.filter(el => el.value.trim()).length;
+  document.getElementById('progress-count').textContent =
+    filled + ' dari ' + required.length + ' terisi';
+  document.getElementById('progress-fill').style.width =
+    (filled / required.length * 100) + '%';
+}
+required.forEach(el => {
+  el.addEventListener('input', () => { clearError(el); updateProgress(); });
+  el.addEventListener('change', () => { clearError(el); updateProgress(); });
+  el.addEventListener('blur', () => {
+    if (!el.value.trim()) markError(el, LABELS[el.id] + ' belum diisi.');
+  });
+});
+
+/* ============ komando lookup ============ */
+let komandoEditMode = false;
+const komandoFields = ['danton_nama','danton_pangkat','danton_nrp',
+                       'danki_nama','danki_pangkat','danki_nrp'];
+const statusEl = document.getElementById('komando-status');
+
+document.getElementById('edit-toggle').addEventListener('click', e => {
+  komandoEditMode = !komandoEditMode;
+  komandoFields.forEach(id => {
+    const el = document.getElementById(id);
+    komandoEditMode ? el.removeAttribute('readonly') : el.setAttribute('readonly', 'readonly');
+  });
+  document.getElementById('danton_manual').value = komandoEditMode ? '1' : '0';
+  document.getElementById('danki_manual').value  = komandoEditMode ? '1' : '0';
+  e.target.textContent = komandoEditMode ? 'Kunci data' : 'Ubah manual';
+  statusEl.textContent = komandoEditMode
+    ? 'Data diisi manual dan tidak akan ditimpa otomatis.'
+    : 'Terisi otomatis dari data satuan.';
+  if (komandoEditMode) document.getElementById('danton_nama').focus();
+});
+
+async function doLookup() {
+  const tingkat = document.getElementById('tingkat').value;
+  const kompi   = document.getElementById('kompi').value;
+  const peleton = document.getElementById('peleton').value;
+  if (!tingkat || !kompi || komandoEditMode) return;
+
+  statusEl.textContent = 'Memuat data komando...';
+  const params = new URLSearchParams({ tingkat, kompi });
+  if (peleton) params.set('peleton', peleton);
+
+  try {
+    const res = await fetch('/api/lookup?' + params);
+    if (!res.ok) { statusEl.textContent = 'Data komando gagal dimuat.'; return; }
+    const data = await res.json();
+
+    if (data.danton && peleton) {
+      danton_nama.value    = data.danton.nama    || '';
+      danton_pangkat.value = data.danton.pangkat || '';
+      danton_nrp.value     = data.danton.nrp     || '';
+    }
+    if (data.danki) {
+      danki_nama.value    = data.danki.nama    || '';
+      danki_pangkat.value = data.danki.pangkat || '';
+      danki_nrp.value     = data.danki.nrp     || '';
+    }
+    const blanks = komandoFields.filter(id => !document.getElementById(id).value).length;
+    statusEl.textContent = blanks
+      ? blanks + ' kolom belum tersedia di data satuan. Gunakan "Ubah manual" untuk mengisinya.'
+      : 'Terisi otomatis dari data satuan.';
+  } catch {
+    statusEl.textContent = 'Data komando gagal dimuat.';
+  }
+}
+['tingkat','kompi','peleton'].forEach(id =>
+  document.getElementById(id).addEventListener('change', doLookup));
+
+/* ============ helpers ============ */
+function showMsg(kind, text) {
+  document.getElementById('msg').innerHTML =
+    '<div class="notice notice-' + kind + '">' + text + '</div>';
+}
+
+/* default the date to today; users almost always report same-day */
+const tgl = document.getElementById('tanggal');
+if (!tgl.value) {
+  const d = new Date();
+  tgl.value = [d.getFullYear(),
+               String(d.getMonth() + 1).padStart(2, '0'),
+               String(d.getDate()).padStart(2, '0')].join('-');
+}
+
+document.getElementById('clear-prefill')?.addEventListener('click', () => {
+  ['nama_taruna','no_akademi','pangkat','tingkat','kompi','peleton'].forEach(id => {
+    document.getElementById(id).value = '';
+  });
+  komandoFields.forEach(id => document.getElementById(id).value = '');
+  document.getElementById('prefill-notice').remove();
+  updateProgress();
+});
+
+/* warn before losing a partly-filled form */
+let dirty = false;
+document.getElementById('lhp-form').addEventListener('input', () => { dirty = true; });
+window.addEventListener('beforeunload', e => {
+  if (dirty) { e.preventDefault(); e.returnValue = ''; }
+});
+
+/* ============ submit ============ */
+document.getElementById('lhp-form').addEventListener('submit', async e => {
+  e.preventDefault();
+
+  const empty = required.filter(el => !el.value.trim());
+  if (empty.length) {
+    empty.forEach(el => markError(el, LABELS[el.id] + ' belum diisi.'));
+    empty[0].scrollIntoView({ behavior: 'smooth', block: 'center' });
+    empty[0].focus({ preventScroll: true });
+    showMsg('error', empty.length + ' kolom wajib belum diisi.');
+    return;
+  }
+
+  const btn = document.getElementById('submit-btn');
+  document.getElementById('msg').innerHTML = '';
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span>Membuat dokumen...';
+
+  const formData = new FormData(e.target);
+  picked.forEach(f => formData.append('foto', f));
+
+  try {
+    const res = await fetch('/api/generate', { method: 'POST', body: formData });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ error: 'Dokumen gagal dibuat.' }));
+      showMsg('error', err.error);
+    } else {
+      const blob = await res.blob();
+      const cd = res.headers.get('Content-Disposition') || '';
+      const m = cd.match(/filename="?([^"]+)"?/);
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url; a.download = m ? m[1] : 'LHP.docx';
+      document.body.appendChild(a); a.click(); a.remove();
+      URL.revokeObjectURL(url);
+      dirty = false;
+      showMsg('ok', 'Dokumen selesai dan sudah diunduh.');
+    }
+  } catch {
+    showMsg('error', 'Tidak dapat terhubung ke server. Periksa koneksi lalu coba lagi.');
+  }
+
+  btn.disabled = false;
+  btn.textContent = 'Buat dan unduh dokumen';
+});
+
+updateProgress();
+if (document.getElementById('tingkat').value) doLookup();
+</script>
+</body>
+</html>

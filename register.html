@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Daftar — LHP AKPOL</title>
+<link rel="icon" href="/static/logo_akpol.png">
+<link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="topbar-inner">
+      <div class="brand"><img src="/static/logo_akpol.png" alt=""> LHP AKPOL</div>
+      <div class="right"><a href="/login">Masuk</a></div>
+    </div>
+  </header>
+
+  <div class="wrap-narrow">
+    <div class="card">
+      <h2>Buat akun</h2>
+      <p class="muted">Akun hanya dipakai untuk mencatat pemakaian. Tidak ada token dan tidak ada biaya.</p>
+
+      {% if error %}<div class="notice notice-error" role="alert">{{ error }}</div>{% endif %}
+
+      <form method="post" action="/register" id="reg-form" novalidate>
+        <label for="nama">Nama lengkap <span class="req">*</span></label>
+        <input type="text" id="nama" name="nama" required autocomplete="name">
+
+        <label for="username">Username <span class="req">*</span></label>
+        <input type="text" id="username" name="username" required minlength="3"
+               autocapitalize="off" autocomplete="username" spellcheck="false">
+        <div class="muted" id="username-hint" style="margin-top:5px; min-height:18px;">
+          Minimal 3 karakter. Huruf, angka, titik, dan garis bawah.
+        </div>
+
+        <label for="password">Password <span class="req">*</span></label>
+        <input type="password" id="password" name="password" required minlength="6"
+               autocomplete="new-password">
+        <div class="pw-meter" aria-hidden="true">
+          <span class="pw-seg" id="seg1"></span>
+          <span class="pw-seg" id="seg2"></span>
+          <span class="pw-seg" id="seg3"></span>
+        </div>
+        <div class="muted" id="pw-hint" style="margin-top:5px; min-height:18px;">Minimal 6 karakter.</div>
+
+        <label for="confirm">Ulangi password <span class="req">*</span></label>
+        <input type="password" id="confirm" name="confirm" required minlength="6"
+               autocomplete="new-password">
+        <div class="muted" id="confirm-hint" style="margin-top:5px; min-height:18px;"></div>
+
+        <div style="margin-top:22px;">
+          <button class="btn btn-primary btn-block" type="submit" id="reg-btn">Buat akun</button>
+        </div>
+      </form>
+
+      <p class="muted" style="text-align:center; margin:16px 0 0;">
+        Sudah punya akun? <a href="/login">Masuk</a>
+      </p>
+    </div>
+  </div>
+
+<script>
+const username = document.getElementById('username');
+const uHint    = document.getElementById('username-hint');
+const pw       = document.getElementById('password');
+const pwHint   = document.getElementById('pw-hint');
+const confirmEl= document.getElementById('confirm');
+const cHint    = document.getElementById('confirm-hint');
+const segs     = [1,2,3].map(i => document.getElementById('seg' + i));
+let timer;
+
+username.addEventListener('input', () => {
+  clearTimeout(timer);
+  const val = username.value.trim();
+  if (val.length < 3) {
+    uHint.textContent = 'Minimal 3 karakter.';
+    uHint.style.color = '';
+    return;
+  }
+  uHint.textContent = 'Memeriksa...';
+  uHint.style.color = '';
+  timer = setTimeout(async () => {
+    try {
+      const res = await fetch('/check-username?username=' + encodeURIComponent(val));
+      const data = await res.json();
+      uHint.textContent = data.available
+        ? 'Username tersedia.'
+        : 'Username sudah dipakai. Pilih yang lain.';
+      uHint.style.color = data.available ? '#1A7F4B' : '#9E1B22';
+    } catch { uHint.textContent = ''; }
+  }, 400);
+});
+
+function scorePassword(v) {
+  let s = 0;
+  if (v.length >= 6) s++;
+  if (v.length >= 10) s++;
+  if (/[0-9]/.test(v) && /[a-zA-Z]/.test(v)) s++;
+  return Math.min(s, 3);
+}
+
+pw.addEventListener('input', () => {
+  const v = pw.value;
+  const score = scorePassword(v);
+  const cls = ['', 'on-weak', 'on-ok', 'on-strong'][score];
+  segs.forEach((seg, i) => {
+    seg.className = 'pw-seg' + (i < score && cls ? ' ' + cls : '');
+  });
+  if (!v)                 { pwHint.textContent = 'Minimal 6 karakter.'; pwHint.style.color = ''; }
+  else if (v.length < 6)  { pwHint.textContent = 'Terlalu pendek.';     pwHint.style.color = '#9E1B22'; }
+  else                    { pwHint.textContent = ['', 'Cukup.', 'Bagus.', 'Kuat.'][score];
+                            pwHint.style.color = '#6F6763'; }
+  checkMatch();
+});
+
+function checkMatch() {
+  if (!confirmEl.value) { cHint.textContent = ''; return true; }
+  const ok = confirmEl.value === pw.value;
+  cHint.textContent = ok ? 'Password cocok.' : 'Password belum cocok.';
+  cHint.style.color = ok ? '#1A7F4B' : '#9E1B22';
+  return ok;
+}
+confirmEl.addEventListener('input', checkMatch);
+
+document.getElementById('reg-form').addEventListener('submit', e => {
+  const problems = [];
+  if (!document.getElementById('nama').value.trim()) problems.push('nama');
+  if (username.value.trim().length < 3) problems.push('username');
+  if (pw.value.length < 6) problems.push('password');
+  if (pw.value !== confirmEl.value) problems.push('confirm');
+
+  if (problems.length) {
+    e.preventDefault();
+    checkMatch();
+    document.getElementById(problems[0]).focus();
+    return;
+  }
+  const btn = document.getElementById('reg-btn');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span>Membuat akun...';
+});
+</script>
+</body>
+</html>

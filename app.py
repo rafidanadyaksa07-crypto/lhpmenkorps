@@ -43,6 +43,9 @@ _lock = threading.Lock()
 
 app = Flask(__name__)
 app.secret_key = os.environ.get("SECRET_KEY", "dev-secret-change-me")
+# Reject oversized uploads before they exhaust memory; surfaced as a clean
+# message via the 413 handler rather than a dropped connection.
+app.config["MAX_CONTENT_LENGTH"] = 40 * 1024 * 1024  # 40 MB total per request
 
 ADMIN_USERNAME = os.environ.get("ADMIN_USERNAME", "admin")
 ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD", "admin123")
@@ -261,6 +264,7 @@ def index():
     return render_template(
         "index.html",
         user=user,
+        defaults=user.get("defaults", {}),
         tingkat_list=[
             {"value": t, **lc.TINGKAT_CONFIG[t]} for t in lc.available_tingkat()
         ],
@@ -347,6 +351,22 @@ def api_generate():
             "tanggal": form["tanggal"],
         })
 
+        # Remember the parts that don't change between reports, so the next
+        # document starts mostly filled in. Kegiatan/tanggal/waktu/tempat are
+        # deliberately NOT remembered -- they differ every time.
+        users = load_users()
+        if user["uid"] in users:
+            users[user["uid"]]["defaults"] = {
+                "nama_taruna": form["nama_taruna"],
+                "no_akademi": form["no_akademi"],
+                "pangkat": form["pangkat"],
+                "tingkat": form["tingkat"],
+                "kompi": form["kompi"],
+                "peleton": form["peleton"],
+                "lokasi_ttd": form["lokasi_ttd"],
+            }
+            save_users(users)
+
         return send_file(out_path, as_attachment=True, download_name=out_name)
     except Exception as e:
         app.logger.exception("generate failed")
@@ -363,11 +383,14 @@ def admin_panel():
     activity = load_activity()
     visitors = load_visitors()
 
-    # per-user generate counts
+    # per-user generate counts and last activity
     gen_counts = {}
+    last_seen = {}
     for entry in activity:
+        u = entry["username"]
         if entry["action"] == "generate":
-            gen_counts[entry["username"]] = gen_counts.get(entry["username"], 0) + 1
+            gen_counts[u] = gen_counts.get(u, 0) + 1
+        last_seen[u] = entry["timestamp"]
 
     user_rows = []
     for uid, u in users.items():
@@ -376,11 +399,17 @@ def admin_panel():
             "username": u["username"],
             "nama": u.get("nama", ""),
             "created_at": u.get("created_at", ""),
+            "last_seen": last_seen.get(u["username"], ""),
             "generate_count": gen_counts.get(u["username"], 0),
         })
-    user_rows.sort(key=lambda r: r["created_at"], reverse=True)
+    user_rows.sort(key=lambda r: (r["generate_count"], r["created_at"]), reverse=True)
 
     recent_activity = list(reversed(activity[-200:]))
+    today_str = date.today().isoformat()
+    generated_today = sum(
+        1 for e in activity
+        if e["action"] == "generate" and e["timestamp"].startswith(today_str)
+    )
 
     return render_template(
         "admin.html",
@@ -389,6 +418,7 @@ def admin_panel():
         visitors=visitors,
         total_users=len(users),
         total_generated=sum(gen_counts.values()),
+        generated_today=generated_today,
     )
 
 
@@ -423,6 +453,55 @@ def admin_reset_password():
 def admin_logout():
     session.clear()
     return redirect(url_for("login_admin"))
+
+
+@app.errorhandler(404)
+def not_found(e):
+    return render_template("error.html",
+                           code="404",
+                           title="Halaman tidak ditemukan",
+                           message="Alamat yang kamu buka tidak ada. Periksa kembali tautannya."), 404
+
+
+@app.errorhandler(500)
+def server_error(e):
+    app.logger.exception("unhandled server error")
+    return render_template("error.html",
+                           code="500",
+                           title="Terjadi gangguan di server",
+                           message="Coba muat ulang halaman. Kalau masih bermasalah, hubungi admin."), 500
+
+
+@app.errorhandler(413)
+def too_large(e):
+    return jsonify({"error": "Total ukuran foto terlalu besar. Kurangi jumlah atau ukuran foto."}), 413
+
+
+@app.errorhandler(404)
+def page_not_found(e):
+    logged_in = "uid" in session
+    return render_template(
+        "error.html",
+        code="404",
+        title="Halaman tidak ditemukan",
+        message="Alamat yang Anda buka tidak ada. Periksa kembali tautannya.",
+        back_url="/app" if logged_in else "/login",
+        back_label="Kembali ke formulir" if logged_in else "Ke halaman masuk",
+    ), 404
+
+
+@app.errorhandler(500)
+def server_error(e):
+    app.logger.exception("unhandled server error")
+    logged_in = "uid" in session
+    return render_template(
+        "error.html",
+        code="500",
+        title="Terjadi kesalahan di server",
+        message="Kesalahan sudah dicatat. Coba ulangi beberapa saat lagi.",
+        back_url="/app" if logged_in else "/login",
+        back_label="Kembali ke formulir" if logged_in else "Ke halaman masuk",
+    ), 500
 
 
 if __name__ == "__main__":
