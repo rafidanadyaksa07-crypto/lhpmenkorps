@@ -83,14 +83,28 @@ def _norm_jabatan_key(s):
 # Excel roster loading (cached, invalidated by file mtime)
 # ---------------------------------------------------------------------------
 _roster_cache = {"mtime": None, "data": None}
+ROSTER_ERROR = None   # set when the workbook can't be read, surfaced in the UI
 
 
 def _load_roster():
-    mtime = os.path.getmtime(EXCEL_PATH) if os.path.exists(EXCEL_PATH) else None
+    global ROSTER_ERROR
+    if not os.path.exists(EXCEL_PATH):
+        ROSTER_ERROR = (
+            "File DATA_DANTONTAR_DANKITAR.xlsx tidak ditemukan di server. "
+            "Pastikan file itu ikut ter-upload ke repo."
+        )
+        return {t: [] for t in TINGKAT_CONFIG}
+
+    mtime = os.path.getmtime(EXCEL_PATH)
     if _roster_cache["mtime"] == mtime and _roster_cache["data"] is not None:
         return _roster_cache["data"]
 
-    wb = openpyxl.load_workbook(EXCEL_PATH, data_only=True)
+    try:
+        wb = openpyxl.load_workbook(EXCEL_PATH, data_only=True)
+    except Exception as exc:
+        ROSTER_ERROR = f"Data satuan gagal dibaca: {exc}"
+        return {t: [] for t in TINGKAT_CONFIG}
+
     data = {}
     for tingkat, cfg in TINGKAT_CONFIG.items():
         sheet_name = cfg["sheet"]
@@ -103,7 +117,7 @@ def _load_roster():
         for row in ws.iter_rows(values_only=False):
             values = [c.value for c in row]
             if values and _norm(values[0]) == "NO" and _norm(values[1]) == "NAMA":
-                header_row = [ _norm(v) for v in values ]
+                header_row = [_norm(v) for v in values]
                 continue
             if header_row is None:
                 continue
@@ -116,6 +130,8 @@ def _load_roster():
                 record[key] = values[i] if i < len(values) else None
             rows.append(record)
         data[tingkat] = rows
+
+    ROSTER_ERROR = None
     _roster_cache["mtime"] = mtime
     _roster_cache["data"] = data
     return data
@@ -362,6 +378,11 @@ def _insert_photos(doc, photo_paths, max_height_cm=5.0):
 
 
 def generate_document(form, photo_paths, output_path):
+    if not os.path.exists(TEMPLATE_PATH):
+        raise FileNotFoundError(
+            "File template_lhp.docx tidak ditemukan di server. "
+            "Pastikan file itu ikut ter-upload ke repo."
+        )
     doc = Document(TEMPLATE_PATH)
     values, meta = build_placeholder_values(form)
     _replace_everywhere(doc, values)

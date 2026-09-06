@@ -20,6 +20,14 @@
 
   <main class="wrap">
 
+    {% if roster_error %}
+    <div class="notice notice-error" role="alert">{{ roster_error }}</div>
+    {% elif not tingkat_list %}
+    <div class="notice notice-error" role="alert">
+      Data satuan kosong. Periksa file DATA_DANTONTAR_DANKITAR.xlsx di server.
+    </div>
+    {% endif %}
+
     {% if defaults %}
     <div class="notice notice-ok" id="prefill-notice">
       Data diri dan satuan diisi dari laporan terakhir Anda.

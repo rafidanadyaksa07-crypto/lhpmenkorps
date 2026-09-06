@@ -139,6 +139,18 @@ def login_required(view):
             if request.is_json or request.path.startswith("/api/"):
                 return jsonify({"error": "Sesi habis, silakan login ulang.", "redirect": "/login"}), 401
             return redirect(url_for("login"))
+
+        # A session cookie can outlive the account it points at -- after a
+        # redeploy without a persistent volume, or if an admin deleted the
+        # user. Treat that as logged out instead of letting the view crash on
+        # a None user.
+        if current_user() is None:
+            session.clear()
+            if request.is_json or request.path.startswith("/api/"):
+                return jsonify({"error": "Sesi tidak berlaku lagi, silakan login ulang.",
+                                "redirect": "/login"}), 401
+            return redirect(url_for("login"))
+
         return view(*args, **kwargs)
     return wrapped
 
@@ -256,18 +268,42 @@ def login_admin():
 # ---------------------------------------------------------------------------
 # Main form
 # ---------------------------------------------------------------------------
+@app.route("/health")
+def health():
+    """Diagnostic endpoint -- open this in the browser if something breaks."""
+    tingkat_loaded = lc.available_tingkat()   # must run before reading ROSTER_ERROR
+    checks = {
+        "excel_roster": os.path.exists(lc.EXCEL_PATH),
+        "word_template": os.path.exists(lc.TEMPLATE_PATH),
+        "logo": os.path.exists(os.path.join(BASE_DIR, "static", "logo_akpol.png")),
+        "data_dir_writable": os.access(DATA_DIR, os.W_OK),
+        "tingkat_loaded": tingkat_loaded,
+        "roster_error": lc.ROSTER_ERROR,
+        "users_registered": len(load_users()),
+    }
+    checks["ok"] = all([
+        checks["excel_roster"], checks["word_template"],
+        checks["data_dir_writable"], tingkat_loaded,
+    ])
+    return jsonify(checks), (200 if checks["ok"] else 503)
+
+
 @app.route("/app")
 @login_required
 def index():
     user = current_user()
     record_visit()
+    # Load the roster FIRST -- lc.ROSTER_ERROR is only set as a side effect of
+    # reading the workbook, so reading it earlier would always give None.
+    tingkat_list = [
+        {"value": t, **lc.TINGKAT_CONFIG[t]} for t in lc.available_tingkat()
+    ]
     return render_template(
         "index.html",
         user=user,
         defaults=user.get("defaults", {}),
-        tingkat_list=[
-            {"value": t, **lc.TINGKAT_CONFIG[t]} for t in lc.available_tingkat()
-        ],
+        roster_error=lc.ROSTER_ERROR,
+        tingkat_list=tingkat_list,
         kompi_list=lc.kompi_letters("2"),
         peleton_list=lc.peleton_numbers(),
         pangkat_list=lc.PANGKAT_LIST,
