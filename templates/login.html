@@ -34,7 +34,7 @@
       <div class="pitch-num">3</div>
       <div>
         <h3>Unduh dokumen</h3>
-        <p>Berkas Word siap cetak. Tidak ada token, tidak ada biaya, tidak ada batas jumlah.</p>
+        <p>Berkas Word siap cetak. Data diri Anda diingat untuk laporan berikutnya.</p>
       </div>
     </div>
   </div>
@@ -42,23 +42,40 @@
   <div class="wrap-narrow">
     <div class="card">
       <h2>Masuk</h2>
-      {% if error %}<div class="notice notice-error">{{ error }}</div>{% endif %}
-      <form method="post" action="/login">
+      {% if error %}<div class="notice notice-error" role="alert">{{ error }}</div>{% endif %}
+
+      <form method="post" action="/login" id="login-form">
         <label for="username">Username</label>
         <input type="text" id="username" name="username" required
-               autocapitalize="off" autocomplete="username">
+               autocapitalize="off" autocomplete="username" spellcheck="false">
+
         <label for="password">Password</label>
         <input type="password" id="password" name="password" required
                autocomplete="current-password">
+
         <div style="margin-top:22px;">
-          <button class="btn btn-primary btn-block" type="submit">Masuk</button>
+          <button class="btn btn-primary btn-block" type="submit" id="login-btn">Masuk</button>
         </div>
       </form>
+
       <p class="muted" style="text-align:center; margin:16px 0 0;">
         Belum punya akun? <a href="/register">Daftar gratis</a>
       </p>
     </div>
     <p class="muted" style="text-align:center;"><a href="/login-admin">Masuk sebagai admin</a></p>
   </div>
+
+<script>
+/* put the cursor where the user needs it, and show progress on submit */
+const u = document.getElementById('username');
+{% if error %}u.focus(); u.select();{% else %}u.focus();{% endif %}
+
+document.getElementById('login-form').addEventListener('submit', e => {
+  if (!u.value.trim() || !document.getElementById('password').value) return;
+  const btn = document.getElementById('login-btn');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span>Masuk...';
+});
+</script>
 </body>
 </html>
