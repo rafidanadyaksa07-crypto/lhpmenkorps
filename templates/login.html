@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>LHP AKPOL — Masuk</title>
+<link rel="icon" href="/static/logo_akpol.png">
+<link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <div class="hero">
+    <img class="logo" src="/static/logo_akpol.png" alt="AKPOL">
+    <h1>Buat LHP dalam hitungan menit</h1>
+    <p>Generate dokumen Laporan Kegiatan Positif otomatis. Gratis, tanpa batas, tanpa token.</p>
+  </div>
+
+  <div class="feature-row">
+    <div class="feature">
+      <div class="icon">🪖</div>
+      <h3>Data Danton &amp; Danki otomatis</h3>
+      <p>Pilih peleton dan kompi, nama serta pangkat komando langsung terisi dari data resmi.</p>
+    </div>
+    <div class="feature">
+      <div class="icon">📄</div>
+      <h3>Langsung jadi file Word</h3>
+      <p>Format resmi, foto dokumentasi otomatis dimasukkan, tinggal unduh dan cetak.</p>
+    </div>
+    <div class="feature">
+      <div class="icon">🆓</div>
+      <h3>100% gratis, tanpa batas</h3>
+      <p>Tidak ada token atau biaya apapun. Login hanya dipakai untuk mencatat pemakaian.</p>
+    </div>
+  </div>
+
+  <div class="wrap-narrow">
+    <div class="card">
+      <h2>Masuk</h2>
+      {% if error %}<div class="error-box">{{ error }}</div>{% endif %}
+      <form method="post" action="/login">
+        <label>Username</label>
+        <input type="text" name="username" required autocapitalize="off" autocomplete="username">
+        <label>Password</label>
+        <input type="password" name="password" required autocomplete="current-password">
+        <div style="margin-top:20px;">
+          <button class="btn btn-primary btn-block" type="submit">Masuk</button>
+        </div>
+      </form>
+      <p class="muted" style="text-align:center; margin-top:16px;">
+        Belum punya akun? <a href="/register">Daftar gratis</a>
+      </p>
+    </div>
+    <p class="muted" style="text-align:center;">
+      <a href="/login-admin">Login admin</a>
+    </p>
+  </div>
+</body>
+</html>

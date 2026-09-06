@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Admin — LHP AKPOL</title>
+<link rel="icon" href="/static/logo_akpol.png">
+<link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <div class="wrap-narrow">
+    <div class="card">
+      <h2>Login Admin</h2>
+      {% if error %}<div class="error-box">{{ error }}</div>{% endif %}
+      <form method="post" action="/login-admin">
+        <label>Username</label>
+        <input type="text" name="username" required>
+        <label>Password</label>
+        <input type="password" name="password" required>
+        <div style="margin-top:20px;">
+          <button class="btn btn-primary btn-block" type="submit">Masuk sebagai Admin</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</body>
+</html>

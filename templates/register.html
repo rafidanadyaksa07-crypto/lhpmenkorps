@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>LHP AKPOL — Daftar</title>
+<link rel="icon" href="/static/logo_akpol.png">
+<link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <div class="wrap-narrow">
+    <div style="text-align:center; margin-bottom:14px;">
+      <img src="/static/logo_akpol.png" style="height:50px;">
+    </div>
+    <div class="card">
+      <h2>Buat akun gratis</h2>
+      <p class="muted">Akun ini hanya dipakai untuk mencatat siapa yang menggunakan aplikasi. Tidak ada token, tidak ada biaya.</p>
+      {% if error %}<div class="error-box">{{ error }}</div>{% endif %}
+      <form method="post" action="/register">
+        <label>Nama lengkap</label>
+        <input type="text" name="nama" required>
+        <label>Username</label>
+        <input type="text" name="username" id="username" required autocapitalize="off">
+        <div id="username-hint" class="muted" style="margin-top:4px;"></div>
+        <label>Password</label>
+        <input type="password" name="password" required minlength="6">
+        <label>Konfirmasi password</label>
+        <input type="password" name="confirm" required minlength="6">
+        <div style="margin-top:20px;">
+          <button class="btn btn-primary btn-block" type="submit">Buat Akun</button>
+        </div>
+      </form>
+      <p class="muted" style="text-align:center; margin-top:16px;">
+        Sudah punya akun? <a href="/login">Masuk</a>
+      </p>
+    </div>
+  </div>
+  <script>
+    const uInput = document.getElementById('username');
+    const hint = document.getElementById('username-hint');
+    let t;
+    uInput.addEventListener('input', () => {
+      clearTimeout(t);
+      const val = uInput.value.trim();
+      if (val.length < 3) { hint.textContent = ''; return; }
+      t = setTimeout(async () => {
+        const res = await fetch('/check-username?username=' + encodeURIComponent(val));
+        const data = await res.json();
+        hint.textContent = data.available ? '✓ Username tersedia' : '✗ Username sudah dipakai';
+        hint.style.color = data.available ? '#1a7f37' : '#d33';
+      }, 400);
+    });
+  </script>
+</body>
+</html>

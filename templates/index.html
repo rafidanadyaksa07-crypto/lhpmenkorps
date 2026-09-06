@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>LHP AKPOL — Buat Laporan</title>
+<link rel="icon" href="/static/logo_akpol.png">
+<link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <div class="topbar">
+    <div class="brand">
+      <img src="/static/logo_akpol.png" alt="AKPOL">
+      LHP AKPOL
+    </div>
+    <div class="right">
+      <span class="badge-free">GRATIS &amp; TANPA BATAS</span>
+      <span>{{ user.nama }}</span>
+      <a href="/logout">Keluar</a>
+    </div>
+  </div>
+
+  <div class="wrap">
+    <div class="card">
+      <h2>① Upload Foto Dokumentasi</h2>
+      <p class="muted">Upload dulu foto kegiatan kamu. Bisa lebih dari satu.</p>
+      <input type="file" id="foto" name="foto" accept="image/*" multiple>
+      <div id="foto-preview" style="margin-top:10px;"></div>
+    </div>
+
+    <form id="lhp-form">
+      <div class="card">
+        <h2>② Data Kegiatan</h2>
+
+        <div class="grid-3">
+          <div>
+            <label>Tingkat</label>
+            <select name="tingkat" id="tingkat" required>
+              <option value="">Pilih tingkat</option>
+              {% for t in tingkat_list %}
+              <option value="{{ t.value }}">TK. {{ t.label }} — Batalyon {{ t.batalyon_nama }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div>
+            <label>Kompi</label>
+            <select name="kompi" id="kompi" required>
+              <option value="">Pilih kompi</option>
+              {% for k in kompi_list %}
+              <option value="{{ k }}">Kompi {{ k }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div>
+            <label>Peleton</label>
+            <select name="peleton" id="peleton" required>
+              <option value="">Pilih peleton</option>
+              {% for p in peleton_list %}
+              <option value="{{ p }}">Peleton {{ p }}</option>
+              {% endfor %}
+            </select>
+          </div>
+        </div>
+
+        <div class="komando-box">
+          <div style="display:flex; justify-content:space-between; align-items:center;">
+            <h4>Data Komando (otomatis terisi)</h4>
+            <span class="toggle-link" id="edit-toggle">✏️ Edit Manual</span>
+          </div>
+          <div id="edit-hint" class="muted" style="display:none; margin-bottom:8px;">
+            Mode edit aktif — data tidak akan ditimpa otomatis.
+          </div>
+          <div class="grid-2">
+            <div>
+              <label style="margin-top:0;">Dantontar — Nama</label>
+              <input type="text" id="danton_nama" name="danton_nama" readonly>
+              <label>Dantontar — Pangkat</label>
+              <input type="text" id="danton_pangkat" name="danton_pangkat" readonly>
+              <label>Dantontar — NRP</label>
+              <input type="text" id="danton_nrp" name="danton_nrp" readonly>
+            </div>
+            <div>
+              <label style="margin-top:0;">Dankitar — Nama</label>
+              <input type="text" id="danki_nama" name="danki_nama" readonly>
+              <label>Dankitar — Pangkat</label>
+              <input type="text" id="danki_pangkat" name="danki_pangkat" readonly>
+              <label>Dankitar — NRP</label>
+              <input type="text" id="danki_nrp" name="danki_nrp" readonly>
+            </div>
+          </div>
+        </div>
+        <input type="hidden" id="danton_manual" name="danton_manual" value="0">
+        <input type="hidden" id="danki_manual" name="danki_manual" value="0">
+
+        <div class="grid-2">
+          <div>
+            <label>Nama Taruna</label>
+            <input type="text" name="nama_taruna" required>
+          </div>
+          <div>
+            <label>No. Akademi</label>
+            <input type="text" name="no_akademi" required>
+          </div>
+        </div>
+
+        <label>Pangkat</label>
+        <select name="pangkat" required>
+          <option value="">Pilih pangkat</option>
+          {% for p in pangkat_list %}
+          <option value="{{ p }}">{{ p }}</option>
+          {% endfor %}
+        </select>
+
+        <label>Nama Kegiatan</label>
+        <input type="text" name="nama_kegiatan" required placeholder="Contoh: Infaq, Olahraga Pagi, Bakti Sosial">
+
+        <div class="grid-2">
+          <div>
+            <label>Tanggal Kegiatan</label>
+            <input type="date" name="tanggal" required>
+          </div>
+          <div>
+            <label>Waktu Kegiatan (WIB)</label>
+            <input type="time" name="waktu" required>
+          </div>
+        </div>
+
+        <label>Tempat Kegiatan</label>
+        <input type="text" name="tempat" required>
+
+        <label>Lokasi Tanda Tangan</label>
+        <input type="text" name="lokasi_ttd" value="Semarang">
+      </div>
+
+      <div class="card">
+        <div id="msg"></div>
+        <button type="submit" class="btn btn-primary btn-block" id="submit-btn">⬇ Buat &amp; Unduh Dokumen LHP</button>
+      </div>
+    </form>
+
+    <p class="muted" style="text-align:center;">Butuh bantuan? Hubungi admin.</p>
+  </div>
+
+<script>
+let komandoEditMode = false;
+
+document.getElementById('edit-toggle').addEventListener('click', () => {
+  komandoEditMode = !komandoEditMode;
+  const fields = ['danton_nama','danton_pangkat','danton_nrp','danki_nama','danki_pangkat','danki_nrp'];
+  fields.forEach(id => {
+    const el = document.getElementById(id);
+    if (komandoEditMode) el.removeAttribute('readonly');
+    else el.setAttribute('readonly', 'readonly');
+  });
+  document.getElementById('danton_manual').value = komandoEditMode ? '1' : '0';
+  document.getElementById('danki_manual').value = komandoEditMode ? '1' : '0';
+  document.getElementById('edit-toggle').textContent = komandoEditMode ? '🔒 Kunci Data' : '✏️ Edit Manual';
+  document.getElementById('edit-hint').style.display = komandoEditMode ? 'block' : 'none';
+});
+
+async function doLookup() {
+  const tingkat = document.getElementById('tingkat').value;
+  const kompi = document.getElementById('kompi').value;
+  const peleton = document.getElementById('peleton').value;
+  if (!tingkat || !kompi) return;
+
+  const params = new URLSearchParams({ tingkat, kompi });
+  if (peleton) params.set('peleton', peleton);
+
+  try {
+    const res = await fetch('/api/lookup?' + params.toString());
+    if (!res.ok) return;
+    const data = await res.json();
+    if (komandoEditMode) return; // don't overwrite manual edits
+
+    if (data.danton && peleton) {
+      document.getElementById('danton_nama').value = data.danton.nama || '';
+      document.getElementById('danton_pangkat').value = data.danton.pangkat || '';
+      document.getElementById('danton_nrp').value = data.danton.nrp || '';
+    }
+    if (data.danki) {
+      document.getElementById('danki_nama').value = data.danki.nama || '';
+      document.getElementById('danki_pangkat').value = data.danki.pangkat || '';
+      document.getElementById('danki_nrp').value = data.danki.nrp || '';
+    }
+  } catch (e) { /* silent */ }
+}
+
+['tingkat', 'kompi', 'peleton'].forEach(id => {
+  document.getElementById(id).addEventListener('change', doLookup);
+});
+
+document.getElementById('foto').addEventListener('change', (e) => {
+  const preview = document.getElementById('foto-preview');
+  preview.innerHTML = '';
+  Array.from(e.target.files).forEach(file => {
+    const url = URL.createObjectURL(file);
+    const img = document.createElement('img');
+    img.src = url;
+    img.className = 'photo-thumb';
+    preview.appendChild(img);
+  });
+});
+
+document.getElementById('lhp-form').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const btn = document.getElementById('submit-btn');
+  const msg = document.getElementById('msg');
+  btn.disabled = true;
+  btn.textContent = 'Membuat dokumen...';
+  msg.innerHTML = '';
+
+  const formData = new FormData(e.target);
+  const fotoInput = document.getElementById('foto');
+  Array.from(fotoInput.files).forEach(f => formData.append('foto', f));
+
+  try {
+    const res = await fetch('/api/generate', { method: 'POST', body: formData });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({error: 'Terjadi kesalahan'}));
+      msg.innerHTML = `<div class="error-box">${err.error}</div>`;
+      btn.disabled = false;
+      btn.textContent = '⬇ Buat & Unduh Dokumen LHP';
+      return;
+    }
+    const blob = await res.blob();
+    const disposition = res.headers.get('Content-Disposition') || '';
+    const match = disposition.match(/filename="?([^"]+)"?/);
+    const filename = match ? match[1] : 'LHP.docx';
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = filename;
+    document.body.appendChild(a); a.click(); a.remove();
+    msg.innerHTML = '<div class="success-box">Dokumen berhasil dibuat dan diunduh.</div>';
+  } catch (err) {
+    msg.innerHTML = '<div class="error-box">Gagal terhubung ke server.</div>';
+  }
+  btn.disabled = false;
+  btn.textContent = '⬇ Buat & Unduh Dokumen LHP';
+});
+</script>
+</body>
+</html>
