@@ -8,17 +8,24 @@
 <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
+  <header class="topbar">
+    <div class="topbar-inner">
+      <div class="brand"><img src="/static/logo_akpol.png" alt=""> LHP AKPOL</div>
+      <div class="right"><a href="/login">Halaman taruna</a></div>
+    </div>
+  </header>
+
   <div class="wrap-narrow">
     <div class="card">
-      <h2>Login Admin</h2>
-      {% if error %}<div class="error-box">{{ error }}</div>{% endif %}
+      <h2>Masuk sebagai admin</h2>
+      {% if error %}<div class="notice notice-error">{{ error }}</div>{% endif %}
       <form method="post" action="/login-admin">
-        <label>Username</label>
-        <input type="text" name="username" required>
-        <label>Password</label>
-        <input type="password" name="password" required>
-        <div style="margin-top:20px;">
-          <button class="btn btn-primary btn-block" type="submit">Masuk sebagai Admin</button>
+        <label for="username">Username</label>
+        <input type="text" id="username" name="username" required autocapitalize="off">
+        <label for="password">Password</label>
+        <input type="password" id="password" name="password" required>
+        <div style="margin-top:22px;">
+          <button class="btn btn-primary btn-block" type="submit">Masuk</button>
         </div>
       </form>
     </div>

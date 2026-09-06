@@ -8,78 +8,119 @@
 <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
-  <div class="topbar">
-    <div class="brand"><img src="/static/logo_akpol.png"> Admin — LHP AKPOL</div>
-    <div class="right"><a href="/admin/logout">Keluar</a></div>
-  </div>
+  <header class="topbar">
+    <div class="topbar-inner">
+      <div class="brand"><img src="/static/logo_akpol.png" alt=""> LHP AKPOL &mdash; Admin</div>
+      <div class="right"><a href="/admin/logout">Keluar</a></div>
+    </div>
+  </header>
 
-  <div class="wrap">
+  <main class="wrap">
     <div class="grid-3">
-      <div class="card stat-card"><div class="num">{{ total_users }}</div><div class="label">Total Akun</div></div>
-      <div class="card stat-card"><div class="num">{{ total_generated }}</div><div class="label">Dokumen Dibuat</div></div>
-      <div class="card stat-card"><div class="num">{{ visitors.total }}</div><div class="label">Total Kunjungan</div></div>
+      <div class="card stat">
+        <div class="num">{{ total_users }}</div>
+        <div class="label">Akun terdaftar</div>
+      </div>
+      <div class="card stat">
+        <div class="num">{{ total_generated }}</div>
+        <div class="label">Dokumen dibuat</div>
+      </div>
+      <div class="card stat">
+        <div class="num">{{ visitors.total }}</div>
+        <div class="label">Kunjungan halaman</div>
+      </div>
     </div>
 
-    <div class="card">
-      <h2>Akun Pengguna</h2>
-      <table>
-        <thead><tr><th>Nama</th><th>Username</th><th>Dibuat</th><th>Dokumen dibuat</th><th></th></tr></thead>
-        <tbody>
-          {% for u in users %}
-          <tr data-uid="{{ u.uid }}">
-            <td>{{ u.nama }}</td>
-            <td>{{ u.username }}</td>
-            <td>{{ u.created_at[:10] }}</td>
-            <td>{{ u.generate_count }}</td>
-            <td>
-              <span class="toggle-link" onclick="resetPassword('{{ u.uid }}')">Reset password</span>
-              &nbsp;|&nbsp;
-              <span class="toggle-link" style="color:#d33;" onclick="deleteUser('{{ u.uid }}')">Hapus</span>
-            </td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
-    </div>
+    <section class="card">
+      <div class="section-head"><h2>Pengguna</h2></div>
+      {% if users %}
+      <div class="table-scroll">
+        <table>
+          <thead>
+            <tr>
+              <th>Nama</th><th>Username</th><th>Terdaftar</th>
+              <th>Dokumen</th><th>Tindakan</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for u in users %}
+            <tr data-uid="{{ u.uid }}">
+              <td>{{ u.nama }}</td>
+              <td>{{ u.username }}</td>
+              <td>{{ u.created_at[:10] }}</td>
+              <td>{{ u.generate_count }}</td>
+              <td>
+                <button class="linkish" onclick="resetPassword('{{ u.uid }}')">Atur ulang password</button>
+                &nbsp;
+                <button class="linkish" onclick="deleteUser('{{ u.uid }}')">Hapus</button>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% else %}
+      <p class="muted">Belum ada akun terdaftar.</p>
+      {% endif %}
+    </section>
 
-    <div class="card">
-      <h2>Log Aktivitas Terbaru</h2>
-      <p class="muted">200 aktivitas terakhir — siapa login, register, dan generate dokumen apa.</p>
-      <table>
-        <thead><tr><th>Waktu (UTC)</th><th>Username</th><th>Aksi</th><th>Detail</th></tr></thead>
-        <tbody>
-          {% for a in activity %}
-          <tr>
-            <td>{{ a.timestamp[:19].replace('T',' ') }}</td>
-            <td>{{ a.username }}</td>
-            <td>{{ a.action }}</td>
-            <td>
-              {% if a.action == 'generate' %}
-                {{ a.detail.nama_taruna }} — {{ a.detail.kegiatan }} (TK{{ a.detail.tingkat }}/{{ a.detail.kompi }}/{{ a.detail.peleton }}, {{ a.detail.tanggal }})
-              {% endif %}
-            </td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
-    </div>
-  </div>
+    <section class="card">
+      <div class="section-head"><h2>Aktivitas</h2></div>
+      <p class="muted">200 catatan terakhir.</p>
+      {% if activity %}
+      <div class="table-scroll">
+        <table>
+          <thead>
+            <tr><th>Waktu (UTC)</th><th>Pengguna</th><th>Aksi</th><th>Rincian</th></tr>
+          </thead>
+          <tbody>
+            {% for a in activity %}
+            <tr>
+              <td>{{ a.timestamp[:16].replace('T', ' ') }}</td>
+              <td>{{ a.username }}</td>
+              <td>
+                <span class="tag {% if a.action == 'generate' %}tag-generate{% endif %}">{{ a.action }}</span>
+              </td>
+              <td>
+                {% if a.action == 'generate' %}
+                  {{ a.detail.nama_taruna }} &middot; {{ a.detail.kegiatan }}
+                  <span class="muted">(Tingkat {{ a.detail.tingkat }}, Kompi {{ a.detail.kompi }}, Peleton {{ a.detail.peleton }}, {{ a.detail.tanggal }})</span>
+                {% endif %}
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% else %}
+      <p class="muted">Belum ada aktivitas tercatat.</p>
+      {% endif %}
+    </section>
+  </main>
 
 <script>
 async function deleteUser(uid) {
-  if (!confirm('Hapus akun ini?')) return;
+  if (!confirm('Hapus akun ini beserta aksesnya?')) return;
   const res = await fetch('/api/admin/delete-user', {
-    method: 'POST', headers: {'Content-Type':'application/json'},
-    body: JSON.stringify({uid})
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ uid })
   });
-  if (res.ok) document.querySelector(`tr[data-uid="${uid}"]`).remove();
+  if (res.ok) {
+    const row = document.querySelector('tr[data-uid="' + uid + '"]');
+    if (row) row.remove();
+  } else {
+    alert('Akun gagal dihapus.');
+  }
 }
+
 async function resetPassword(uid) {
   const pw = prompt('Password baru (minimal 6 karakter):');
   if (!pw) return;
   const res = await fetch('/api/admin/reset-password', {
-    method: 'POST', headers: {'Content-Type':'application/json'},
-    body: JSON.stringify({uid, password: pw})
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ uid, password: pw })
   });
   const data = await res.json();
   alert(data.ok ? 'Password diperbarui.' : ('Gagal: ' + data.error));

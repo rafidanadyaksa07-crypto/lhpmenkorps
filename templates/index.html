@@ -3,47 +3,81 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>LHP AKPOL — Buat Laporan</title>
+<title>Buat LHP — LHP AKPOL</title>
 <link rel="icon" href="/static/logo_akpol.png">
 <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
-  <div class="topbar">
-    <div class="brand">
-      <img src="/static/logo_akpol.png" alt="AKPOL">
-      LHP AKPOL
+  <header class="topbar">
+    <div class="topbar-inner">
+      <div class="brand">
+        <img src="/static/logo_akpol.png" alt="">
+        LHP AKPOL
+      </div>
+      <div class="right">
+        <span class="who">{{ user.nama }}</span>
+        <a href="/logout">Keluar</a>
+      </div>
     </div>
-    <div class="right">
-      <span class="badge-free">GRATIS &amp; TANPA BATAS</span>
-      <span>{{ user.nama }}</span>
-      <a href="/logout">Keluar</a>
-    </div>
-  </div>
+  </header>
 
-  <div class="wrap">
-    <div class="card">
-      <h2>① Upload Foto Dokumentasi</h2>
-      <p class="muted">Upload dulu foto kegiatan kamu. Bisa lebih dari satu.</p>
-      <input type="file" id="foto" name="foto" accept="image/*" multiple>
-      <div id="foto-preview" style="margin-top:10px;"></div>
-    </div>
+  <main class="wrap">
+
+    <!-- ============ 1. FOTO ============ -->
+    <section class="card">
+      <div class="section-head">
+        <span class="step">1</span>
+        <h2>Foto dokumentasi</h2>
+      </div>
+
+      <div class="dropzone" id="dropzone" tabindex="0" role="button"
+           aria-label="Pilih atau jatuhkan foto dokumentasi">
+        <div class="dropzone-icon">
+          <svg width="34" height="34" viewBox="0 0 24 24" fill="none"
+               stroke="currentColor" stroke-width="1.6" stroke-linecap="round"
+               stroke-linejoin="round" aria-hidden="true">
+            <rect x="3" y="4" width="18" height="16" rx="2"/>
+            <circle cx="8.5" cy="9.5" r="1.5"/>
+            <path d="M21 15l-5-5L5 20"/>
+          </svg>
+        </div>
+        <div class="dropzone-title">Jatuhkan foto di sini, atau klik untuk memilih</div>
+        <div class="dropzone-sub">JPG, PNG, atau HEIC &middot; bisa pilih beberapa sekaligus</div>
+      </div>
+      <input type="file" id="foto" accept="image/*" multiple hidden>
+
+      <div class="photo-grid" id="photo-grid"></div>
+
+      <div class="upload-summary" id="upload-summary" hidden>
+        <span id="upload-count"></span>
+        <button type="button" class="linkish" id="clear-photos">Hapus semua foto</button>
+      </div>
+      <p class="muted" id="upload-order-hint" hidden>
+        Foto muncul di dokumen sesuai urutan nomor di bawah ini.
+      </p>
+    </section>
 
     <form id="lhp-form">
-      <div class="card">
-        <h2>② Data Kegiatan</h2>
+
+      <!-- ============ 2. SATUAN ============ -->
+      <section class="card">
+        <div class="section-head">
+          <span class="step">2</span>
+          <h2>Satuan</h2>
+        </div>
 
         <div class="grid-3">
           <div>
-            <label>Tingkat</label>
+            <label for="tingkat">Tingkat</label>
             <select name="tingkat" id="tingkat" required>
               <option value="">Pilih tingkat</option>
               {% for t in tingkat_list %}
-              <option value="{{ t.value }}">TK. {{ t.label }} — Batalyon {{ t.batalyon_nama }}</option>
+              <option value="{{ t.value }}">Tingkat {{ t.label }} &mdash; {{ t.batalyon_nama }}</option>
               {% endfor %}
             </select>
           </div>
           <div>
-            <label>Kompi</label>
+            <label for="kompi">Kompi</label>
             <select name="kompi" id="kompi" required>
               <option value="">Pilih kompi</option>
               {% for k in kompi_list %}
@@ -52,7 +86,7 @@
             </select>
           </div>
           <div>
-            <label>Peleton</label>
+            <label for="peleton">Peleton</label>
             <select name="peleton" id="peleton" required>
               <option value="">Pilih peleton</option>
               {% for p in peleton_list %}
@@ -62,181 +96,297 @@
           </div>
         </div>
 
-        <div class="komando-box">
-          <div style="display:flex; justify-content:space-between; align-items:center;">
-            <h4>Data Komando (otomatis terisi)</h4>
-            <span class="toggle-link" id="edit-toggle">✏️ Edit Manual</span>
+        <div class="komando">
+          <div class="komando-head">
+            <h3>Data komando</h3>
+            <button type="button" class="linkish" id="edit-toggle">Ubah manual</button>
           </div>
-          <div id="edit-hint" class="muted" style="display:none; margin-bottom:8px;">
-            Mode edit aktif — data tidak akan ditimpa otomatis.
-          </div>
+          <p class="muted" id="komando-status">Pilih tingkat, kompi, dan peleton untuk mengisi otomatis.</p>
+
           <div class="grid-2">
             <div>
-              <label style="margin-top:0;">Dantontar — Nama</label>
+              <label for="danton_nama">Dantontar &mdash; nama</label>
               <input type="text" id="danton_nama" name="danton_nama" readonly>
-              <label>Dantontar — Pangkat</label>
+              <label for="danton_pangkat">Dantontar &mdash; pangkat</label>
               <input type="text" id="danton_pangkat" name="danton_pangkat" readonly>
-              <label>Dantontar — NRP</label>
+              <label for="danton_nrp">Dantontar &mdash; NRP</label>
               <input type="text" id="danton_nrp" name="danton_nrp" readonly>
             </div>
             <div>
-              <label style="margin-top:0;">Dankitar — Nama</label>
+              <label for="danki_nama">Dankitar &mdash; nama</label>
               <input type="text" id="danki_nama" name="danki_nama" readonly>
-              <label>Dankitar — Pangkat</label>
+              <label for="danki_pangkat">Dankitar &mdash; pangkat</label>
               <input type="text" id="danki_pangkat" name="danki_pangkat" readonly>
-              <label>Dankitar — NRP</label>
+              <label for="danki_nrp">Dankitar &mdash; NRP</label>
               <input type="text" id="danki_nrp" name="danki_nrp" readonly>
             </div>
           </div>
         </div>
         <input type="hidden" id="danton_manual" name="danton_manual" value="0">
         <input type="hidden" id="danki_manual" name="danki_manual" value="0">
+      </section>
+
+      <!-- ============ 3. IDENTITAS ============ -->
+      <section class="card">
+        <div class="section-head">
+          <span class="step">3</span>
+          <h2>Identitas taruna</h2>
+        </div>
 
         <div class="grid-2">
           <div>
-            <label>Nama Taruna</label>
-            <input type="text" name="nama_taruna" required>
+            <label for="nama_taruna">Nama lengkap</label>
+            <input type="text" id="nama_taruna" name="nama_taruna" required>
           </div>
           <div>
-            <label>No. Akademi</label>
-            <input type="text" name="no_akademi" required>
+            <label for="no_akademi">Nomor akademi</label>
+            <input type="text" id="no_akademi" name="no_akademi" required>
           </div>
         </div>
 
-        <label>Pangkat</label>
-        <select name="pangkat" required>
+        <label for="pangkat">Pangkat</label>
+        <select name="pangkat" id="pangkat" required>
           <option value="">Pilih pangkat</option>
           {% for p in pangkat_list %}
           <option value="{{ p }}">{{ p }}</option>
           {% endfor %}
         </select>
+      </section>
 
-        <label>Nama Kegiatan</label>
-        <input type="text" name="nama_kegiatan" required placeholder="Contoh: Infaq, Olahraga Pagi, Bakti Sosial">
+      <!-- ============ 4. KEGIATAN ============ -->
+      <section class="card">
+        <div class="section-head">
+          <span class="step">4</span>
+          <h2>Rincian kegiatan</h2>
+        </div>
+
+        <label for="nama_kegiatan">Nama kegiatan</label>
+        <input type="text" id="nama_kegiatan" name="nama_kegiatan" required
+               placeholder="Infaq, olahraga pagi, bakti sosial">
 
         <div class="grid-2">
           <div>
-            <label>Tanggal Kegiatan</label>
-            <input type="date" name="tanggal" required>
+            <label for="tanggal">Tanggal</label>
+            <input type="date" id="tanggal" name="tanggal" required>
           </div>
           <div>
-            <label>Waktu Kegiatan (WIB)</label>
-            <input type="time" name="waktu" required>
+            <label for="waktu">Waktu (WIB)</label>
+            <input type="time" id="waktu" name="waktu" required>
           </div>
         </div>
 
-        <label>Tempat Kegiatan</label>
-        <input type="text" name="tempat" required>
+        <label for="tempat">Tempat</label>
+        <input type="text" id="tempat" name="tempat" required>
 
-        <label>Lokasi Tanda Tangan</label>
-        <input type="text" name="lokasi_ttd" value="Semarang">
-      </div>
+        <label for="lokasi_ttd">Kota pada tanda tangan</label>
+        <input type="text" id="lokasi_ttd" name="lokasi_ttd" value="Semarang">
+      </section>
 
-      <div class="card">
+      <section class="card">
         <div id="msg"></div>
-        <button type="submit" class="btn btn-primary btn-block" id="submit-btn">⬇ Buat &amp; Unduh Dokumen LHP</button>
-      </div>
+        <button type="submit" class="btn btn-primary btn-block" id="submit-btn">
+          Buat dan unduh dokumen
+        </button>
+      </section>
     </form>
-
-    <p class="muted" style="text-align:center;">Butuh bantuan? Hubungi admin.</p>
-  </div>
+  </main>
 
 <script>
-let komandoEditMode = false;
+/* ---------------- photo upload ----------------
+   Files are kept in a JS array rather than reading the input's FileList
+   directly, so that picking files a second time ADDS to the selection
+   instead of replacing it, and individual photos can be removed. */
+const picked = [];
+const fileInput   = document.getElementById('foto');
+const dropzone    = document.getElementById('dropzone');
+const grid        = document.getElementById('photo-grid');
+const summary     = document.getElementById('upload-summary');
+const countLabel  = document.getElementById('upload-count');
+const orderHint   = document.getElementById('upload-order-hint');
 
-document.getElementById('edit-toggle').addEventListener('click', () => {
+function formatSize(bytes) {
+  if (bytes < 1024) return bytes + ' B';
+  if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(0) + ' KB';
+  return (bytes / 1024 / 1024).toFixed(1) + ' MB';
+}
+
+function addFiles(fileList) {
+  for (const file of fileList) {
+    if (!file.type.startsWith('image/')) continue;
+    const dup = picked.some(f => f.name === file.name && f.size === file.size);
+    if (!dup) picked.push(file);
+  }
+  renderPhotos();
+}
+
+function removePhoto(index) {
+  picked.splice(index, 1);
+  renderPhotos();
+}
+
+function renderPhotos() {
+  grid.innerHTML = '';
+  picked.forEach((file, i) => {
+    const item = document.createElement('div');
+    item.className = 'photo-item';
+
+    const img = document.createElement('img');
+    img.src = URL.createObjectURL(file);
+    img.alt = '';
+    img.onload = () => URL.revokeObjectURL(img.src);
+
+    const order = document.createElement('span');
+    order.className = 'photo-order';
+    order.textContent = i + 1;
+
+    const remove = document.createElement('button');
+    remove.type = 'button';
+    remove.className = 'photo-remove';
+    remove.setAttribute('aria-label', 'Hapus foto ' + (i + 1));
+    remove.textContent = '\u00d7';
+    remove.addEventListener('click', () => removePhoto(i));
+
+    const name = document.createElement('div');
+    name.className = 'photo-name';
+    name.textContent = file.name;
+
+    item.append(img, order, remove, name);
+    grid.appendChild(item);
+  });
+
+  const has = picked.length > 0;
+  summary.hidden = !has;
+  orderHint.hidden = !has;
+  if (has) {
+    const total = picked.reduce((sum, f) => sum + f.size, 0);
+    countLabel.textContent =
+      picked.length + (picked.length === 1 ? ' foto' : ' foto') + ' \u00b7 ' + formatSize(total);
+  }
+}
+
+dropzone.addEventListener('click', () => fileInput.click());
+dropzone.addEventListener('keydown', e => {
+  if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); fileInput.click(); }
+});
+fileInput.addEventListener('change', e => {
+  addFiles(e.target.files);
+  fileInput.value = '';   // allow re-picking the same file later
+});
+
+['dragenter', 'dragover'].forEach(ev =>
+  dropzone.addEventListener(ev, e => {
+    e.preventDefault();
+    dropzone.classList.add('dragging');
+  })
+);
+['dragleave', 'drop'].forEach(ev =>
+  dropzone.addEventListener(ev, e => {
+    e.preventDefault();
+    if (ev === 'dragleave' && dropzone.contains(e.relatedTarget)) return;
+    dropzone.classList.remove('dragging');
+  })
+);
+dropzone.addEventListener('drop', e => addFiles(e.dataTransfer.files));
+
+document.getElementById('clear-photos').addEventListener('click', () => {
+  picked.length = 0;
+  renderPhotos();
+});
+
+/* ---------------- komando lookup ---------------- */
+let komandoEditMode = false;
+const komandoFields = ['danton_nama','danton_pangkat','danton_nrp',
+                       'danki_nama','danki_pangkat','danki_nrp'];
+const statusEl = document.getElementById('komando-status');
+
+document.getElementById('edit-toggle').addEventListener('click', (e) => {
   komandoEditMode = !komandoEditMode;
-  const fields = ['danton_nama','danton_pangkat','danton_nrp','danki_nama','danki_pangkat','danki_nrp'];
-  fields.forEach(id => {
+  komandoFields.forEach(id => {
     const el = document.getElementById(id);
     if (komandoEditMode) el.removeAttribute('readonly');
     else el.setAttribute('readonly', 'readonly');
   });
   document.getElementById('danton_manual').value = komandoEditMode ? '1' : '0';
-  document.getElementById('danki_manual').value = komandoEditMode ? '1' : '0';
-  document.getElementById('edit-toggle').textContent = komandoEditMode ? '🔒 Kunci Data' : '✏️ Edit Manual';
-  document.getElementById('edit-hint').style.display = komandoEditMode ? 'block' : 'none';
+  document.getElementById('danki_manual').value  = komandoEditMode ? '1' : '0';
+  e.target.textContent = komandoEditMode ? 'Kunci data' : 'Ubah manual';
+  statusEl.textContent = komandoEditMode
+    ? 'Data diisi manual dan tidak akan ditimpa otomatis.'
+    : 'Terisi otomatis dari data satuan.';
 });
 
 async function doLookup() {
   const tingkat = document.getElementById('tingkat').value;
-  const kompi = document.getElementById('kompi').value;
+  const kompi   = document.getElementById('kompi').value;
   const peleton = document.getElementById('peleton').value;
   if (!tingkat || !kompi) return;
+  if (komandoEditMode) return;
 
   const params = new URLSearchParams({ tingkat, kompi });
   if (peleton) params.set('peleton', peleton);
 
   try {
-    const res = await fetch('/api/lookup?' + params.toString());
-    if (!res.ok) return;
+    const res = await fetch('/api/lookup?' + params);
+    if (!res.ok) { statusEl.textContent = 'Data komando gagal dimuat.'; return; }
     const data = await res.json();
-    if (komandoEditMode) return; // don't overwrite manual edits
 
     if (data.danton && peleton) {
-      document.getElementById('danton_nama').value = data.danton.nama || '';
-      document.getElementById('danton_pangkat').value = data.danton.pangkat || '';
-      document.getElementById('danton_nrp').value = data.danton.nrp || '';
+      danton_nama.value    = data.danton.nama || '';
+      danton_pangkat.value = data.danton.pangkat || '';
+      danton_nrp.value     = data.danton.nrp || '';
     }
     if (data.danki) {
-      document.getElementById('danki_nama').value = data.danki.nama || '';
-      document.getElementById('danki_pangkat').value = data.danki.pangkat || '';
-      document.getElementById('danki_nrp').value = data.danki.nrp || '';
+      danki_nama.value    = data.danki.nama || '';
+      danki_pangkat.value = data.danki.pangkat || '';
+      danki_nrp.value     = data.danki.nrp || '';
     }
-  } catch (e) { /* silent */ }
+
+    const blanks = komandoFields.filter(id => !document.getElementById(id).value);
+    statusEl.textContent = blanks.length
+      ? 'Sebagian data belum tersedia. Gunakan "Ubah manual" untuk mengisinya.'
+      : 'Terisi otomatis dari data satuan.';
+  } catch {
+    statusEl.textContent = 'Data komando gagal dimuat.';
+  }
 }
+['tingkat','kompi','peleton'].forEach(id =>
+  document.getElementById(id).addEventListener('change', doLookup)
+);
 
-['tingkat', 'kompi', 'peleton'].forEach(id => {
-  document.getElementById(id).addEventListener('change', doLookup);
-});
-
-document.getElementById('foto').addEventListener('change', (e) => {
-  const preview = document.getElementById('foto-preview');
-  preview.innerHTML = '';
-  Array.from(e.target.files).forEach(file => {
-    const url = URL.createObjectURL(file);
-    const img = document.createElement('img');
-    img.src = url;
-    img.className = 'photo-thumb';
-    preview.appendChild(img);
-  });
-});
-
+/* ---------------- submit ---------------- */
 document.getElementById('lhp-form').addEventListener('submit', async (e) => {
   e.preventDefault();
   const btn = document.getElementById('submit-btn');
   const msg = document.getElementById('msg');
+  msg.innerHTML = '';
   btn.disabled = true;
   btn.textContent = 'Membuat dokumen...';
-  msg.innerHTML = '';
 
   const formData = new FormData(e.target);
-  const fotoInput = document.getElementById('foto');
-  Array.from(fotoInput.files).forEach(f => formData.append('foto', f));
+  picked.forEach(f => formData.append('foto', f));
 
   try {
     const res = await fetch('/api/generate', { method: 'POST', body: formData });
     if (!res.ok) {
-      const err = await res.json().catch(() => ({error: 'Terjadi kesalahan'}));
-      msg.innerHTML = `<div class="error-box">${err.error}</div>`;
-      btn.disabled = false;
-      btn.textContent = '⬇ Buat & Unduh Dokumen LHP';
-      return;
+      const err = await res.json().catch(() => ({ error: 'Dokumen gagal dibuat.' }));
+      msg.innerHTML = '<div class="notice notice-error">' + err.error + '</div>';
+    } else {
+      const blob = await res.blob();
+      const cd = res.headers.get('Content-Disposition') || '';
+      const m = cd.match(/filename="?([^"]+)"?/);
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = m ? m[1] : 'LHP.docx';
+      document.body.appendChild(a); a.click(); a.remove();
+      URL.revokeObjectURL(url);
+      msg.innerHTML = '<div class="notice notice-ok">Dokumen selesai dan sudah diunduh.</div>';
     }
-    const blob = await res.blob();
-    const disposition = res.headers.get('Content-Disposition') || '';
-    const match = disposition.match(/filename="?([^"]+)"?/);
-    const filename = match ? match[1] : 'LHP.docx';
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url; a.download = filename;
-    document.body.appendChild(a); a.click(); a.remove();
-    msg.innerHTML = '<div class="success-box">Dokumen berhasil dibuat dan diunduh.</div>';
-  } catch (err) {
-    msg.innerHTML = '<div class="error-box">Gagal terhubung ke server.</div>';
+  } catch {
+    msg.innerHTML = '<div class="notice notice-error">Tidak dapat terhubung ke server. Coba lagi.</div>';
   }
+
   btn.disabled = false;
-  btn.textContent = '⬇ Buat & Unduh Dokumen LHP';
+  btn.textContent = 'Buat dan unduh dokumen';
 });
 </script>
 </body>
