@@ -3,209 +3,227 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Buat LHP — LHP AKPOL</title>
+<title>Susun laporan — LHP AKPOL</title>
 <link rel="icon" href="/static/logo_akpol.png">
 <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
-  <header class="topbar">
-    <div class="topbar-inner">
-      <div class="brand"><img src="/static/logo_akpol.png" alt=""> LHP AKPOL</div>
-      <div class="right">
-        <span class="who">{{ user.nama }}</span>
-        <a href="/logout">Keluar</a>
+
+<header class="masthead">
+  <div class="masthead-bar">
+    <span class="wordmark"><img src="/static/logo_akpol.png" alt=""> LHP Akpol</span>
+    <nav>
+      <span class="signed-in">{{ user.nama }}</span>
+      <a href="/logout">Keluar</a>
+    </nav>
+  </div>
+</header>
+
+<main class="sheet">
+
+  {% if roster_error %}
+  <div class="notice notice-error" role="alert">{{ roster_error }}</div>
+  {% elif not tingkat_list %}
+  <div class="notice notice-error" role="alert">
+    Data satuan kosong. Periksa berkas DATA_DANTONTAR_DANKITAR.xlsx di server.
+  </div>
+  {% endif %}
+
+  {% if defaults %}
+  <div class="notice notice-ok" id="prefill-notice">
+    Keterangan diri dan satuan diambil dari laporan terakhir Anda.
+    <button type="button" class="linkish" id="clear-prefill"
+            style="margin-left:8px; color:inherit;">Kosongkan</button>
+  </div>
+  {% endif %}
+
+  <div class="register">
+
+    <aside class="index-rail">
+      <div class="rail-head">Isian</div>
+      <ol>
+        <li><a href="#blok-1" data-rail="1"><span class="n">01</span> Foto kegiatan</a></li>
+        <li><a href="#blok-2" data-rail="2"><span class="n">02</span> Satuan</a></li>
+        <li><a href="#blok-3" data-rail="3"><span class="n">03</span> Keterangan diri</a></li>
+        <li><a href="#blok-4" data-rail="4"><span class="n">04</span> Rincian kegiatan</a></li>
+      </ol>
+      <div class="tally" style="margin-top:20px;">
+        <span class="tally-count" id="progress-count"></span>
       </div>
-    </div>
-  </header>
+      <div class="tally-track"><div class="tally-fill" id="progress-fill"></div></div>
+    </aside>
 
-  <main class="wrap">
-
-    {% if roster_error %}
-    <div class="notice notice-error" role="alert">{{ roster_error }}</div>
-    {% elif not tingkat_list %}
-    <div class="notice notice-error" role="alert">
-      Data satuan kosong. Periksa file DATA_DANTONTAR_DANKITAR.xlsx di server.
-    </div>
-    {% endif %}
-
-    {% if defaults %}
-    <div class="notice notice-ok" id="prefill-notice">
-      Data diri dan satuan diisi dari laporan terakhir Anda.
-      <button type="button" class="linkish" id="clear-prefill"
-              style="color:inherit; margin-left:6px;">Kosongkan</button>
-    </div>
-    {% endif %}
-
-    <div class="progress" aria-hidden="true">
-      <span class="progress-count" id="progress-count"></span>
-      <div class="progress-track"><div class="progress-fill" id="progress-fill"></div></div>
-    </div>
-
-    <!-- ===== 1. FOTO ===== -->
-    <section class="card">
-      <div class="section-head"><span class="step">1</span><h2>Foto dokumentasi</h2></div>
-
-      <div class="dropzone" id="dropzone" tabindex="0" role="button"
-           aria-label="Pilih atau jatuhkan foto dokumentasi">
-        <div class="dropzone-icon">
-          <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-               stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-            <rect x="3" y="4" width="18" height="16" rx="2"/>
-            <circle cx="8.5" cy="9.5" r="1.5"/><path d="M21 15l-5-5L5 20"/>
-          </svg>
-        </div>
-        <div class="dropzone-title">Jatuhkan foto di sini, atau klik untuk memilih</div>
-        <div class="dropzone-sub">JPG, PNG, atau HEIC &middot; bisa pilih beberapa sekaligus</div>
-      </div>
-      <input type="file" id="foto" accept="image/*" multiple hidden>
-
-      <div class="photo-grid" id="photo-grid"></div>
-
-      <div class="upload-summary" id="upload-summary" hidden>
-        <span id="upload-count"></span>
-        <button type="button" class="linkish" id="clear-photos">Hapus semua foto</button>
-      </div>
-      <p class="muted" id="upload-order-hint" hidden>
-        Foto muncul di dokumen sesuai nomor urut di bawah.
-      </p>
-    </section>
-
-    <form id="lhp-form" novalidate>
-
-      <!-- ===== 2. SATUAN ===== -->
-      <section class="card">
-        <div class="section-head"><span class="step">2</span><h2>Satuan</h2></div>
-
-        <div class="grid-3">
-          <div>
-            <label for="tingkat">Tingkat <span class="req">*</span></label>
-            <select name="tingkat" id="tingkat" data-required>
-              <option value="">Pilih tingkat</option>
-              {% for t in tingkat_list %}
-              <option value="{{ t.value }}" {% if defaults.tingkat == t.value %}selected{% endif %}>
-                Tingkat {{ t.label }} &mdash; {{ t.batalyon_nama }}
-              </option>
-              {% endfor %}
-            </select>
+    <div>
+      <!-- 01 · foto -->
+      <section class="field-block" id="blok-1">
+        <div class="block-head"><span class="n">01</span><h2>Foto kegiatan</h2></div>
+        <div class="block-body">
+          <div class="dropzone" id="dropzone" tabindex="0" role="button"
+               aria-label="Pilih atau jatuhkan foto kegiatan">
+            <div class="dropzone-mark">
+              <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                   stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <rect x="3" y="4.5" width="18" height="15" rx="1"/>
+                <circle cx="8.5" cy="10" r="1.6"/><path d="M21 15.5l-5.2-5.2L5 20"/>
+              </svg>
+            </div>
+            <strong>Jatuhkan foto di sini</strong>
+            <p class="note">Atau klik untuk memilih. JPG, PNG, atau HEIC.</p>
           </div>
-          <div>
-            <label for="kompi">Kompi <span class="req">*</span></label>
-            <select name="kompi" id="kompi" data-required>
-              <option value="">Pilih kompi</option>
-              {% for k in kompi_list %}
-              <option value="{{ k }}" {% if defaults.kompi == k %}selected{% endif %}>Kompi {{ k }}</option>
-              {% endfor %}
-            </select>
-          </div>
-          <div>
-            <label for="peleton">Peleton <span class="req">*</span></label>
-            <select name="peleton" id="peleton" data-required>
-              <option value="">Pilih peleton</option>
-              {% for p in peleton_list %}
-              <option value="{{ p }}" {% if defaults.peleton == p %}selected{% endif %}>Peleton {{ p }}</option>
-              {% endfor %}
-            </select>
-          </div>
-        </div>
+          <input type="file" id="foto" accept="image/*" multiple hidden>
 
-        <div class="komando">
-          <div class="komando-head">
-            <h3>Data komando</h3>
-            <button type="button" class="linkish" id="edit-toggle">Ubah manual</button>
+          <div class="photo-grid" id="photo-grid"></div>
+
+          <div class="intake-foot" id="upload-summary" hidden>
+            <span id="upload-count"></span>
+            <button type="button" class="linkish" id="clear-photos">Hapus semua</button>
           </div>
-          <p class="muted" id="komando-status" role="status">
-            Pilih tingkat, kompi, dan peleton untuk mengisi otomatis.
+          <p class="note" id="upload-order-hint" hidden style="margin:10px 0 0;">
+            Urutan nomor di atas menentukan urutan foto di lampiran.
           </p>
+        </div>
+      </section>
 
-          <div class="grid-2">
-            <div>
-              <label for="danton_nama">Dantontar &mdash; nama</label>
-              <input type="text" id="danton_nama" name="danton_nama" readonly>
-              <label for="danton_pangkat">Dantontar &mdash; pangkat</label>
-              <input type="text" id="danton_pangkat" name="danton_pangkat" readonly>
-              <label for="danton_nrp">Dantontar &mdash; NRP</label>
-              <input type="text" id="danton_nrp" name="danton_nrp" readonly>
+      <form id="lhp-form" novalidate>
+
+        <!-- 02 · satuan -->
+        <section class="field-block" id="blok-2">
+          <div class="block-head"><span class="n">02</span><h2>Satuan</h2></div>
+          <div class="block-body">
+            <div class="row row-3">
+              <div>
+                <label for="tingkat">Tingkat <span class="req">*</span></label>
+                <select name="tingkat" id="tingkat" data-required>
+                  <option value="">Pilih</option>
+                  {% for t in tingkat_list %}
+                  <option value="{{ t.value }}" {% if defaults.tingkat == t.value %}selected{% endif %}>
+                    Tingkat {{ t.label }} &mdash; {{ t.batalyon_nama|title }}
+                  </option>
+                  {% endfor %}
+                </select>
+              </div>
+              <div>
+                <label for="kompi">Kompi <span class="req">*</span></label>
+                <select name="kompi" id="kompi" data-required>
+                  <option value="">Pilih</option>
+                  {% for k in kompi_list %}
+                  <option value="{{ k }}" {% if defaults.kompi == k %}selected{% endif %}>Kompi {{ k }}</option>
+                  {% endfor %}
+                </select>
+              </div>
+              <div>
+                <label for="peleton">Peleton <span class="req">*</span></label>
+                <select name="peleton" id="peleton" data-required>
+                  <option value="">Pilih</option>
+                  {% for p in peleton_list %}
+                  <option value="{{ p }}" {% if defaults.peleton == p %}selected{% endif %}>Peleton {{ p }}</option>
+                  {% endfor %}
+                </select>
+              </div>
             </div>
-            <div>
-              <label for="danki_nama">Dankitar &mdash; nama</label>
-              <input type="text" id="danki_nama" name="danki_nama" readonly>
-              <label for="danki_pangkat">Dankitar &mdash; pangkat</label>
-              <input type="text" id="danki_pangkat" name="danki_pangkat" readonly>
-              <label for="danki_nrp">Dankitar &mdash; NRP</label>
-              <input type="text" id="danki_nrp" name="danki_nrp" readonly>
+
+            <div class="command">
+              <div class="command-head">
+                <h3>Pengasuh</h3>
+                <button type="button" class="linkish" id="edit-toggle">Isi sendiri</button>
+              </div>
+              <p class="note" id="komando-status" role="status" style="margin-bottom:6px;">
+                Tentukan tingkat, kompi, dan peleton untuk mengisi otomatis.
+              </p>
+
+              <div class="row row-2">
+                <div>
+                  <label for="danton_nama">Dantontar</label>
+                  <input type="text" id="danton_nama" name="danton_nama" readonly placeholder="Nama">
+                  <label for="danton_pangkat">Pangkat</label>
+                  <input type="text" id="danton_pangkat" name="danton_pangkat" readonly>
+                  <label for="danton_nrp">NRP</label>
+                  <input type="text" id="danton_nrp" name="danton_nrp" readonly>
+                </div>
+                <div>
+                  <label for="danki_nama">Dankitar</label>
+                  <input type="text" id="danki_nama" name="danki_nama" readonly placeholder="Nama">
+                  <label for="danki_pangkat">Pangkat</label>
+                  <input type="text" id="danki_pangkat" name="danki_pangkat" readonly>
+                  <label for="danki_nrp">NRP</label>
+                  <input type="text" id="danki_nrp" name="danki_nrp" readonly>
+                </div>
+              </div>
             </div>
           </div>
-        </div>
+        </section>
         <input type="hidden" id="danton_manual" name="danton_manual" value="0">
         <input type="hidden" id="danki_manual" name="danki_manual" value="0">
-      </section>
 
-      <!-- ===== 3. IDENTITAS ===== -->
-      <section class="card">
-        <div class="section-head"><span class="step">3</span><h2>Identitas taruna</h2></div>
+        <!-- 03 · diri -->
+        <section class="field-block" id="blok-3">
+          <div class="block-head"><span class="n">03</span><h2>Keterangan diri</h2></div>
+          <div class="block-body">
+            <div class="row row-2">
+              <div>
+                <label for="nama_taruna">Nama lengkap <span class="req">*</span></label>
+                <input type="text" id="nama_taruna" name="nama_taruna" data-required
+                       value="{{ defaults.nama_taruna or '' }}" autocomplete="name">
+              </div>
+              <div>
+                <label for="no_akademi">Nomor akademi <span class="req">*</span></label>
+                <input type="text" id="no_akademi" name="no_akademi" data-required
+                       value="{{ defaults.no_akademi or '' }}" inputmode="numeric">
+              </div>
+            </div>
+            <label for="pangkat">Pangkat <span class="req">*</span></label>
+            <select name="pangkat" id="pangkat" data-required>
+              <option value="">Pilih</option>
+              {% for p in pangkat_list %}
+              <option value="{{ p }}" {% if defaults.pangkat == p %}selected{% endif %}>{{ p|title }}</option>
+              {% endfor %}
+            </select>
+          </div>
+        </section>
 
-        <div class="grid-2">
-          <div>
-            <label for="nama_taruna">Nama lengkap <span class="req">*</span></label>
-            <input type="text" id="nama_taruna" name="nama_taruna" data-required
-                   value="{{ defaults.nama_taruna or '' }}" autocomplete="name">
+        <!-- 04 · kegiatan -->
+        <section class="field-block" id="blok-4">
+          <div class="block-head"><span class="n">04</span><h2>Rincian kegiatan</h2></div>
+          <div class="block-body">
+            <label for="nama_kegiatan">Kegiatan <span class="req">*</span></label>
+            <input type="text" id="nama_kegiatan" name="nama_kegiatan" data-required
+                   placeholder="Infaq, olahraga pagi, bakti sosial">
+
+            <div class="row row-2">
+              <div>
+                <label for="tanggal">Tanggal <span class="req">*</span></label>
+                <input type="date" id="tanggal" name="tanggal" data-required>
+              </div>
+              <div>
+                <label for="waktu">Pukul (WIB) <span class="req">*</span></label>
+                <input type="time" id="waktu" name="waktu" data-required>
+              </div>
+            </div>
+
+            <label for="tempat">Tempat <span class="req">*</span></label>
+            <input type="text" id="tempat" name="tempat" data-required>
+
+            <label for="lokasi_ttd">Kota pada tanda tangan</label>
+            <input type="text" id="lokasi_ttd" name="lokasi_ttd"
+                   value="{{ defaults.lokasi_ttd or 'Semarang' }}">
           </div>
-          <div>
-            <label for="no_akademi">Nomor akademi <span class="req">*</span></label>
-            <input type="text" id="no_akademi" name="no_akademi" data-required
-                   value="{{ defaults.no_akademi or '' }}" inputmode="numeric">
-          </div>
+        </section>
+
+        <div class="issue">
+          <div id="msg" role="status" aria-live="polite"></div>
+          <button type="submit" class="btn btn-solid btn-wide" id="submit-btn">
+            Susun dan unduh dokumen
+          </button>
         </div>
-
-        <label for="pangkat">Pangkat <span class="req">*</span></label>
-        <select name="pangkat" id="pangkat" data-required>
-          <option value="">Pilih pangkat</option>
-          {% for p in pangkat_list %}
-          <option value="{{ p }}" {% if defaults.pangkat == p %}selected{% endif %}>{{ p }}</option>
-          {% endfor %}
-        </select>
-      </section>
-
-      <!-- ===== 4. KEGIATAN ===== -->
-      <section class="card">
-        <div class="section-head"><span class="step">4</span><h2>Rincian kegiatan</h2></div>
-
-        <label for="nama_kegiatan">Nama kegiatan <span class="req">*</span></label>
-        <input type="text" id="nama_kegiatan" name="nama_kegiatan" data-required
-               placeholder="Infaq, olahraga pagi, bakti sosial">
-
-        <div class="grid-2">
-          <div>
-            <label for="tanggal">Tanggal <span class="req">*</span></label>
-            <input type="date" id="tanggal" name="tanggal" data-required>
-          </div>
-          <div>
-            <label for="waktu">Waktu (WIB) <span class="req">*</span></label>
-            <input type="time" id="waktu" name="waktu" data-required>
-          </div>
-        </div>
-
-        <label for="tempat">Tempat <span class="req">*</span></label>
-        <input type="text" id="tempat" name="tempat" data-required>
-
-        <label for="lokasi_ttd">Kota pada tanda tangan</label>
-        <input type="text" id="lokasi_ttd" name="lokasi_ttd"
-               value="{{ defaults.lokasi_ttd or 'Semarang' }}">
-      </section>
-
-      <section class="submit-bar">
-        <div id="msg" role="status" aria-live="polite"></div>
-        <button type="submit" class="btn btn-primary btn-block" id="submit-btn">
-          Buat dan unduh dokumen
-        </button>
-      </section>
-    </form>
-  </main>
+      </form>
+    </div>
+  </div>
+</main>
 
 <script>
-/* ============ photo upload ============
-   Files live in a JS array so a second pick ADDS instead of replacing,
-   and individual photos can be removed. */
+/* ══ foto ══════════════════════════════════════════════════════
+   Files are held in a JS array, so choosing again ADDS to the set
+   instead of replacing it, and single photos can be removed.     */
 const picked = [];
 const fileInput  = document.getElementById('foto');
 const dropzone   = document.getElementById('dropzone');
@@ -214,16 +232,16 @@ const summary    = document.getElementById('upload-summary');
 const countLabel = document.getElementById('upload-count');
 const orderHint  = document.getElementById('upload-order-hint');
 
-const formatSize = b =>
+const sizeOf = b =>
   b < 1024 ? b + ' B'
-  : b < 1048576 ? (b / 1024).toFixed(0) + ' KB'
-  : (b / 1048576).toFixed(1) + ' MB';
+  : b < 1048576 ? (b/1024).toFixed(0) + ' KB'
+  : (b/1048576).toFixed(1) + ' MB';
 
 function addFiles(list) {
   let skipped = 0;
-  for (const file of list) {
-    if (!file.type.startsWith('image/')) { skipped++; continue; }
-    if (!picked.some(f => f.name === file.name && f.size === file.size)) picked.push(file);
+  for (const f of list) {
+    if (!f.type.startsWith('image/')) { skipped++; continue; }
+    if (!picked.some(x => x.name === f.name && x.size === f.size)) picked.push(f);
   }
   renderPhotos();
   if (skipped) showMsg('error', skipped + ' berkas dilewati karena bukan gambar.');
@@ -242,7 +260,7 @@ function renderPhotos() {
 
     const order = document.createElement('span');
     order.className = 'photo-order';
-    order.textContent = i + 1;
+    order.textContent = String(i + 1).padStart(2, '0');
 
     const rm = document.createElement('button');
     rm.type = 'button';
@@ -263,8 +281,8 @@ function renderPhotos() {
   summary.hidden = !has;
   orderHint.hidden = !has;
   if (has) {
-    const total = picked.reduce((s, f) => s + f.size, 0);
-    countLabel.textContent = picked.length + ' foto \u00b7 ' + formatSize(total);
+    countLabel.textContent =
+      picked.length + ' foto, ' + sizeOf(picked.reduce((s, f) => s + f.size, 0));
   }
 }
 
@@ -274,168 +292,178 @@ dropzone.addEventListener('keydown', e => {
 });
 fileInput.addEventListener('change', e => { addFiles(e.target.files); fileInput.value = ''; });
 
-['dragenter', 'dragover'].forEach(ev =>
-  dropzone.addEventListener(ev, e => { e.preventDefault(); dropzone.classList.add('dragging'); }));
-['dragleave', 'drop'].forEach(ev =>
-  dropzone.addEventListener(ev, e => {
-    e.preventDefault();
-    if (ev === 'dragleave' && dropzone.contains(e.relatedTarget)) return;
-    dropzone.classList.remove('dragging');
-  }));
+['dragenter','dragover'].forEach(ev => dropzone.addEventListener(ev, e => {
+  e.preventDefault(); dropzone.classList.add('dragging');
+}));
+['dragleave','drop'].forEach(ev => dropzone.addEventListener(ev, e => {
+  e.preventDefault();
+  if (ev === 'dragleave' && dropzone.contains(e.relatedTarget)) return;
+  dropzone.classList.remove('dragging');
+}));
 dropzone.addEventListener('drop', e => addFiles(e.dataTransfer.files));
 document.getElementById('clear-photos').addEventListener('click', () => {
   picked.length = 0; renderPhotos();
 });
 
-/* ============ validation + progress ============ */
+/* ══ kelengkapan isian ═════════════════════════════════════════ */
 const required = [...document.querySelectorAll('[data-required]')];
-const LABELS = {
-  tingkat: 'Tingkat', kompi: 'Kompi', peleton: 'Peleton',
-  nama_taruna: 'Nama lengkap', no_akademi: 'Nomor akademi', pangkat: 'Pangkat',
-  nama_kegiatan: 'Nama kegiatan', tanggal: 'Tanggal', waktu: 'Waktu', tempat: 'Tempat'
+const LABEL = {
+  tingkat:'Tingkat', kompi:'Kompi', peleton:'Peleton',
+  nama_taruna:'Nama lengkap', no_akademi:'Nomor akademi', pangkat:'Pangkat',
+  nama_kegiatan:'Kegiatan', tanggal:'Tanggal', waktu:'Pukul', tempat:'Tempat'
+};
+const BLOCK_OF = {
+  tingkat:1, kompi:1, peleton:1,
+  nama_taruna:2, no_akademi:2, pangkat:2,
+  nama_kegiatan:3, tanggal:3, waktu:3, tempat:3
 };
 
 function clearError(el) {
   el.classList.remove('invalid');
-  const next = el.parentNode.querySelector('.field-error');
-  if (next) next.remove();
+  const e = el.parentNode.querySelector('.field-error');
+  if (e) e.remove();
 }
 function markError(el, text) {
   clearError(el);
   el.classList.add('invalid');
-  const span = document.createElement('span');
-  span.className = 'field-error';
-  span.textContent = text;
-  el.insertAdjacentElement('afterend', span);
+  const s = document.createElement('span');
+  s.className = 'field-error';
+  s.textContent = text;
+  el.insertAdjacentElement('afterend', s);
 }
 function updateProgress() {
-  const filled = required.filter(el => el.value.trim()).length;
+  const done = required.filter(el => el.value.trim());
   document.getElementById('progress-count').textContent =
-    filled + ' dari ' + required.length + ' terisi';
+    done.length + '/' + required.length + ' isian lengkap';
   document.getElementById('progress-fill').style.width =
-    (filled / required.length * 100) + '%';
+    (done.length / required.length * 100) + '%';
+
+  // mark a rail entry once every field in that block is filled
+  const perBlock = {};
+  required.forEach(el => {
+    const b = BLOCK_OF[el.id];
+    perBlock[b] = (perBlock[b] ?? true) && !!el.value.trim();
+  });
+  document.querySelectorAll('.index-rail a[data-rail]').forEach(a => {
+    const n = Number(a.dataset.rail);
+    if (n === 1) a.classList.toggle('done', picked.length > 0);
+    else a.classList.toggle('done', !!perBlock[n - 1]);
+  });
 }
 required.forEach(el => {
-  el.addEventListener('input', () => { clearError(el); updateProgress(); });
+  el.addEventListener('input',  () => { clearError(el); updateProgress(); });
   el.addEventListener('change', () => { clearError(el); updateProgress(); });
-  el.addEventListener('blur', () => {
-    if (!el.value.trim()) markError(el, LABELS[el.id] + ' belum diisi.');
+  el.addEventListener('blur',   () => {
+    if (!el.value.trim()) markError(el, LABEL[el.id] + ' belum diisi.');
   });
 });
 
-/* ============ komando lookup ============ */
-let komandoEditMode = false;
-const komandoFields = ['danton_nama','danton_pangkat','danton_nrp',
-                       'danki_nama','danki_pangkat','danki_nrp'];
+/* ══ pengasuh ══════════════════════════════════════════════════ */
+let manualMode = false;
+const cmdFields = ['danton_nama','danton_pangkat','danton_nrp',
+                   'danki_nama','danki_pangkat','danki_nrp'];
 const statusEl = document.getElementById('komando-status');
 
 document.getElementById('edit-toggle').addEventListener('click', e => {
-  komandoEditMode = !komandoEditMode;
-  komandoFields.forEach(id => {
+  manualMode = !manualMode;
+  cmdFields.forEach(id => {
     const el = document.getElementById(id);
-    komandoEditMode ? el.removeAttribute('readonly') : el.setAttribute('readonly', 'readonly');
+    manualMode ? el.removeAttribute('readonly') : el.setAttribute('readonly','readonly');
   });
-  document.getElementById('danton_manual').value = komandoEditMode ? '1' : '0';
-  document.getElementById('danki_manual').value  = komandoEditMode ? '1' : '0';
-  e.target.textContent = komandoEditMode ? 'Kunci data' : 'Ubah manual';
-  statusEl.textContent = komandoEditMode
-    ? 'Data diisi manual dan tidak akan ditimpa otomatis.'
-    : 'Terisi otomatis dari data satuan.';
-  if (komandoEditMode) document.getElementById('danton_nama').focus();
+  document.getElementById('danton_manual').value = manualMode ? '1' : '0';
+  document.getElementById('danki_manual').value  = manualMode ? '1' : '0';
+  e.target.textContent = manualMode ? 'Kunci' : 'Isi sendiri';
+  statusEl.textContent = manualMode
+    ? 'Diisi sendiri. Data satuan tidak akan menimpanya.'
+    : 'Terisi dari data satuan.';
+  if (manualMode) document.getElementById('danton_nama').focus();
 });
 
 async function doLookup() {
   const tingkat = document.getElementById('tingkat').value;
   const kompi   = document.getElementById('kompi').value;
   const peleton = document.getElementById('peleton').value;
-  if (!tingkat || !kompi || komandoEditMode) return;
+  if (!tingkat || !kompi || manualMode) return;
 
-  statusEl.textContent = 'Memuat data komando...';
-  const params = new URLSearchParams({ tingkat, kompi });
-  if (peleton) params.set('peleton', peleton);
+  statusEl.textContent = 'Mengambil data satuan...';
+  const q = new URLSearchParams({ tingkat, kompi });
+  if (peleton) q.set('peleton', peleton);
 
   try {
-    const res = await fetch('/api/lookup?' + params);
-    if (!res.ok) { statusEl.textContent = 'Data komando gagal dimuat.'; return; }
-    const data = await res.json();
-
-    if (data.danton && peleton) {
-      danton_nama.value    = data.danton.nama    || '';
-      danton_pangkat.value = data.danton.pangkat || '';
-      danton_nrp.value     = data.danton.nrp     || '';
+    const res = await fetch('/api/lookup?' + q);
+    if (!res.ok) { statusEl.textContent = 'Data satuan tidak terbaca.'; return; }
+    const d = await res.json();
+    if (d.danton && peleton) {
+      danton_nama.value = d.danton.nama || '';
+      danton_pangkat.value = d.danton.pangkat || '';
+      danton_nrp.value = d.danton.nrp || '';
     }
-    if (data.danki) {
-      danki_nama.value    = data.danki.nama    || '';
-      danki_pangkat.value = data.danki.pangkat || '';
-      danki_nrp.value     = data.danki.nrp     || '';
+    if (d.danki) {
+      danki_nama.value = d.danki.nama || '';
+      danki_pangkat.value = d.danki.pangkat || '';
+      danki_nrp.value = d.danki.nrp || '';
     }
-    const blanks = komandoFields.filter(id => !document.getElementById(id).value).length;
-    statusEl.textContent = blanks
-      ? blanks + ' kolom belum tersedia di data satuan. Gunakan "Ubah manual" untuk mengisinya.'
-      : 'Terisi otomatis dari data satuan.';
+    const blank = cmdFields.filter(id => !document.getElementById(id).value).length;
+    statusEl.textContent = blank
+      ? blank + ' kolom belum ada di data satuan. Pilih "Isi sendiri" untuk melengkapinya.'
+      : 'Terisi dari data satuan.';
   } catch {
-    statusEl.textContent = 'Data komando gagal dimuat.';
+    statusEl.textContent = 'Data satuan tidak terbaca.';
   }
 }
 ['tingkat','kompi','peleton'].forEach(id =>
   document.getElementById(id).addEventListener('change', doLookup));
 
-/* ============ helpers ============ */
+/* ══ lain-lain ═════════════════════════════════════════════════ */
 function showMsg(kind, text) {
   document.getElementById('msg').innerHTML =
     '<div class="notice notice-' + kind + '">' + text + '</div>';
 }
 
-/* default the date to today; users almost always report same-day */
 const tgl = document.getElementById('tanggal');
 if (!tgl.value) {
   const d = new Date();
-  tgl.value = [d.getFullYear(),
-               String(d.getMonth() + 1).padStart(2, '0'),
-               String(d.getDate()).padStart(2, '0')].join('-');
+  tgl.value = [d.getFullYear(), String(d.getMonth()+1).padStart(2,'0'),
+               String(d.getDate()).padStart(2,'0')].join('-');
 }
 
 document.getElementById('clear-prefill')?.addEventListener('click', () => {
-  ['nama_taruna','no_akademi','pangkat','tingkat','kompi','peleton'].forEach(id => {
-    document.getElementById(id).value = '';
-  });
-  komandoFields.forEach(id => document.getElementById(id).value = '');
+  ['nama_taruna','no_akademi','pangkat','tingkat','kompi','peleton']
+    .forEach(id => document.getElementById(id).value = '');
+  cmdFields.forEach(id => document.getElementById(id).value = '');
   document.getElementById('prefill-notice').remove();
   updateProgress();
 });
 
-/* warn before losing a partly-filled form */
 let dirty = false;
 document.getElementById('lhp-form').addEventListener('input', () => { dirty = true; });
-window.addEventListener('beforeunload', e => {
-  if (dirty) { e.preventDefault(); e.returnValue = ''; }
-});
+window.addEventListener('beforeunload', e => { if (dirty) { e.preventDefault(); e.returnValue = ''; } });
 
-/* ============ submit ============ */
+/* ══ kirim ═════════════════════════════════════════════════════ */
 document.getElementById('lhp-form').addEventListener('submit', async e => {
   e.preventDefault();
 
   const empty = required.filter(el => !el.value.trim());
   if (empty.length) {
-    empty.forEach(el => markError(el, LABELS[el.id] + ' belum diisi.'));
-    empty[0].scrollIntoView({ behavior: 'smooth', block: 'center' });
-    empty[0].focus({ preventScroll: true });
-    showMsg('error', empty.length + ' kolom wajib belum diisi.');
+    empty.forEach(el => markError(el, LABEL[el.id] + ' belum diisi.'));
+    empty[0].scrollIntoView({ behavior:'smooth', block:'center' });
+    empty[0].focus({ preventScroll:true });
+    showMsg('error', empty.length + ' isian wajib masih kosong.');
     return;
   }
 
   const btn = document.getElementById('submit-btn');
   document.getElementById('msg').innerHTML = '';
   btn.disabled = true;
-  btn.innerHTML = '<span class="spinner"></span>Membuat dokumen...';
+  btn.innerHTML = '<span class="spinner"></span>Menyusun';
 
-  const formData = new FormData(e.target);
-  picked.forEach(f => formData.append('foto', f));
+  const fd = new FormData(e.target);
+  picked.forEach(f => fd.append('foto', f));
 
   try {
-    const res = await fetch('/api/generate', { method: 'POST', body: formData });
+    const res = await fetch('/api/generate', { method:'POST', body: fd });
     if (!res.ok) {
-      const err = await res.json().catch(() => ({ error: 'Dokumen gagal dibuat.' }));
+      const err = await res.json().catch(() => ({ error:'Dokumen gagal disusun.' }));
       showMsg('error', err.error);
     } else {
       const blob = await res.blob();
@@ -447,14 +475,14 @@ document.getElementById('lhp-form').addEventListener('submit', async e => {
       document.body.appendChild(a); a.click(); a.remove();
       URL.revokeObjectURL(url);
       dirty = false;
-      showMsg('ok', 'Dokumen selesai dan sudah diunduh.');
+      showMsg('ok', 'Dokumen tersusun dan sudah diunduh.');
     }
   } catch {
-    showMsg('error', 'Tidak dapat terhubung ke server. Periksa koneksi lalu coba lagi.');
+    showMsg('error', 'Server tidak terjangkau. Periksa koneksi lalu coba lagi.');
   }
 
   btn.disabled = false;
-  btn.textContent = 'Buat dan unduh dokumen';
+  btn.textContent = 'Susun dan unduh dokumen';
 });
 
 updateProgress();

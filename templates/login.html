@@ -4,77 +4,87 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Masuk — LHP AKPOL</title>
-<meta name="description" content="Buat dokumen Laporan Kegiatan Positif taruna AKPOL secara otomatis. Gratis dan tanpa batas.">
+<meta name="description" content="Menyusun Laporan Kegiatan Positif taruna Akademi Kepolisian menjadi dokumen Word berformat resmi.">
 <link rel="icon" href="/static/logo_akpol.png">
 <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
-  <section class="hero">
-    <img src="/static/logo_akpol.png" alt="">
-    <h1>Laporan kegiatan positif, selesai dalam lima menit</h1>
-    <p>Isi satu formulir, dapatkan dokumen Word dengan format resmi. Gratis, tanpa batas pemakaian.</p>
-  </section>
 
-  <div class="pitch">
-    <div class="pitch-item">
-      <div class="pitch-num">1</div>
-      <div>
-        <h3>Unggah foto dokumentasi</h3>
-        <p>Jatuhkan beberapa foto sekaligus. Semuanya masuk ke lampiran secara otomatis.</p>
+<header class="masthead">
+  <div class="masthead-hero">
+    <img class="seal" src="/static/logo_akpol.png" alt="">
+    <h1>Laporan kegiatan positif</h1>
+    <hr class="kop-rule">
+    <p>Isi keterangannya sekali, lampirkan fotonya, dan dokumen Word berformat resmi langsung tersusun.</p>
+  </div>
+</header>
+
+<div class="sheet-narrow lift">
+  <div class="panel">
+    <h2 class="panel-title">Masuk</h2>
+    <p class="note" style="margin-bottom:20px;">Gunakan akun yang Anda daftarkan sendiri.</p>
+
+    {% if error %}<div class="notice notice-error" role="alert">{{ error }}</div>{% endif %}
+
+    <form method="post" action="/login" id="login-form">
+      <label for="username">Nama pengguna</label>
+      <input type="text" id="username" name="username" required
+             autocapitalize="off" autocomplete="username" spellcheck="false">
+
+      <label for="password">Kata sandi</label>
+      <input type="password" id="password" name="password" required
+             autocomplete="current-password">
+
+      <div style="margin-top:26px;">
+        <button class="btn btn-solid btn-wide" type="submit" id="login-btn">Masuk</button>
       </div>
-    </div>
-    <div class="pitch-item">
-      <div class="pitch-num">2</div>
-      <div>
-        <h3>Pilih tingkat, kompi, dan peleton</h3>
-        <p>Nama dan pangkat Dantontar serta Dankitar terisi sendiri dari data satuan.</p>
-      </div>
-    </div>
-    <div class="pitch-item">
-      <div class="pitch-num">3</div>
-      <div>
-        <h3>Unduh dokumen</h3>
-        <p>Berkas Word siap cetak. Data diri Anda diingat untuk laporan berikutnya.</p>
-      </div>
-    </div>
+    </form>
+
+    <p class="note" style="text-align:center; margin:18px 0 0;">
+      Belum terdaftar? <a href="/register">Buat akun</a>
+    </p>
   </div>
 
-  <div class="wrap-narrow">
-    <div class="card">
-      <h2>Masuk</h2>
-      {% if error %}<div class="notice notice-error" role="alert">{{ error }}</div>{% endif %}
+  <p class="note" style="text-align:center; margin-top:16px;">
+    <a href="/login-admin">Masuk sebagai pengelola</a>
+  </p>
+</div>
 
-      <form method="post" action="/login" id="login-form">
-        <label for="username">Username</label>
-        <input type="text" id="username" name="username" required
-               autocapitalize="off" autocomplete="username" spellcheck="false">
-
-        <label for="password">Password</label>
-        <input type="password" id="password" name="password" required
-               autocomplete="current-password">
-
-        <div style="margin-top:22px;">
-          <button class="btn btn-primary btn-block" type="submit" id="login-btn">Masuk</button>
-        </div>
-      </form>
-
-      <p class="muted" style="text-align:center; margin:16px 0 0;">
-        Belum punya akun? <a href="/register">Daftar gratis</a>
-      </p>
+<div class="brief">
+  <hr class="rule2">
+  <div class="brief-item">
+    <span class="n">01</span>
+    <div>
+      <h3>Lampirkan foto kegiatan</h3>
+      <p>Jatuhkan beberapa foto sekaligus. Semuanya tersusun rapi di halaman lampiran.</p>
     </div>
-    <p class="muted" style="text-align:center;"><a href="/login-admin">Masuk sebagai admin</a></p>
   </div>
+  <div class="brief-item">
+    <span class="n">02</span>
+    <div>
+      <h3>Tentukan tingkat, kompi, dan peleton</h3>
+      <p>Nama, pangkat, dan NRP Dantontar serta Dankitar terisi dari data satuan.</p>
+    </div>
+  </div>
+  <div class="brief-item">
+    <span class="n">03</span>
+    <div>
+      <h3>Unduh dokumennya</h3>
+      <p>Berkas Word siap cetak. Keterangan diri Anda tersimpan untuk laporan berikutnya.</p>
+    </div>
+  </div>
+</div>
 
 <script>
-/* put the cursor where the user needs it, and show progress on submit */
 const u = document.getElementById('username');
-{% if error %}u.focus(); u.select();{% else %}u.focus();{% endif %}
+u.focus();
+{% if error %}u.select();{% endif %}
 
-document.getElementById('login-form').addEventListener('submit', e => {
+document.getElementById('login-form').addEventListener('submit', () => {
   if (!u.value.trim() || !document.getElementById('password').value) return;
-  const btn = document.getElementById('login-btn');
-  btn.disabled = true;
-  btn.innerHTML = '<span class="spinner"></span>Masuk...';
+  const b = document.getElementById('login-btn');
+  b.disabled = true;
+  b.innerHTML = '<span class="spinner"></span>Masuk';
 });
 </script>
 </body>
