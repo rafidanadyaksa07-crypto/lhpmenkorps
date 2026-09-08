@@ -1,10 +1,8 @@
 # LHP AKPOL — Free Edition
 
-Generates LHP Kegiatan Positif Word documents automatically. No tokens, no
-payment, no gating — every logged-in user can generate unlimited documents.
-Login exists purely so you (the admin) can see who is using the app and what
-they generated.
+LHP AKPOL MENKOPRS ini dibuat murni untuk menentang monetisasi dan memberikan semua taruna peluang yang sama dan adil beserta menghilangkan penggolongan taruna yang memiliki rezeki lebih dan tidak semua dapat perlakuan yang sama dan adil
 
+walaupun begitu fungsi dari suatu website ini adalah "agar memotong waktu yang dimakan oleh taruna untuk membuat laporan secara manual dan agar memfokuskan taruna untuk menggunakan waktunya untuk melakukan kegiatan positif lainnya" -Danmentarsis
 ## Features
 
 - **Self-register** — username + password, instant, no approval needed.
