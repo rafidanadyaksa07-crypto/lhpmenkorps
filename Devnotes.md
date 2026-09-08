@@ -1,6 +1,7 @@
 # Dev notes — LHP AKPOL (Free Edition)
 
-Website ini dibuat untuk menghilangkan doktrin MONETISASI dan kesenjangan diantara taruna yang memiliki kepemilikan barang yang lebih dan kepemilikan barang yang rendah dan untuk membuat ada nya kesetaraan dalam pembuatan lhp yang dapat bermanfaat apabila diberikan secara gratis, umum dan secara tersebar dengan adil kepada seluruh taruna karena dapat mempercepat pembuatan dan memotong waktu untuk dialihkan kepada giat positif lainnya
+Website ini dibuat untuk menghilangkan kesenjangan antar-taruna akibat monetisasi LHP dan perbedaan kepemilikan barang. Setiap taruna berhak mendapatkan akses yang sama terhadap LHP secara gratis, umum, dan adil. Dengan mempercepat akses dan pembuatan LHP, waktu dapat dialihkan untuk kegiatan lain yang lebih positif dan bermanfaat. Kesetaraan tercipta ketika sesuatu yang bermanfaat dapat diakses oleh semua, bukan hanya mereka yang mampu mendapatkannya.
+
 
 ## Template placeholder design — read this before touching `template_lhp.docx`
 
