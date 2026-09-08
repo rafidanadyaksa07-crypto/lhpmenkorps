@@ -91,12 +91,23 @@ a:hover { color: var(--oxblood); }
   padding: 13px 26px;
 }
 .wordmark {
-  display: flex; align-items: center; gap: 11px;
+  display: flex; align-items: center; gap: 10px;
   font-family: var(--display); font-weight: 500;
   font-size: 19px; letter-spacing: .06em; text-transform: uppercase;
   color: #FBF4F1;
+  white-space: nowrap;
 }
-.wordmark img { height: 30px; display: block; }
+/* Resimen Korps crest leads; the Akpol crest sits beside it, smaller and
+   separated by a hairline, the way paired crests appear on a letterhead. */
+.wordmark .crest { height: 32px; width: auto; display: block; }
+.wordmark .crest-side {
+  height: 24px;
+  padding-left: 10px;
+  margin-right: 2px;
+  border-left: 1px solid rgba(255,255,255,.28);
+  box-sizing: content-box;
+}
+@media (max-width: 520px) { .wordmark .crest-side { display: none; } }
 .masthead-bar nav {
   display: flex; align-items: center; gap: 20px;
   font-size: 14.5px;
@@ -107,7 +118,23 @@ a:hover { color: var(--oxblood); }
 
 /* hero variant, used on the entry page */
 .masthead-hero { padding: 62px 26px 54px; text-align: center; }
-.masthead-hero .seal { height: 84px; margin-bottom: 22px; }
+.crest-pair {
+  display: flex; align-items: flex-end; justify-content: center;
+  gap: 22px; margin-bottom: 24px;
+}
+.masthead-hero .seal { height: 118px; width: auto; display: block; }
+.masthead-hero .seal-side {
+  height: 66px;
+  opacity: .92;
+  padding-left: 22px;
+  border-left: 1px solid rgba(255,255,255,.22);
+  box-sizing: content-box;
+}
+@media (max-width: 520px) {
+  .crest-pair { gap: 14px; }
+  .masthead-hero .seal { height: 74px; }
+  .masthead-hero .seal-side { height: 44px; padding-left: 14px; }
+}
 .masthead-hero h1 {
   font-family: var(--display); font-weight: 500;
   font-size: clamp(30px, 6vw, 52px);
