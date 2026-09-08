@@ -1,13 +1,6 @@
 # Dev notes — LHP AKPOL (Free Edition)
 
-Context for whoever (human or Claude) picks this project up next.
-
-## Why this rebuild exists
-
-An earlier version of this project (paid, token-gated, Google OAuth +
-Midtrans/Duitku) accumulated a lot of fragile patches. This is a from-scratch
-rebuild with the payment/OAuth complexity removed entirely: login is only for
-attributing usage in the admin log, and generation is unlimited and free.
+Website ini dibuat untuk menghilangkan doktrin MONETISASI dan kesenjangan diantara taruna yang memiliki kepemilikan barang yang lebih dan kepemilikan barang yang rendah dan untuk membuat ada nya kesetaraan dalam pembuatan lhp yang dapat bermanfaat apabila diberikan secara gratis, umum dan secara tersebar dengan adil kepada seluruh taruna karena dapat mempercepat pembuatan dan memotong waktu untuk dialihkan kepada giat positif lainnya
 
 ## Template placeholder design — read this before touching `template_lhp.docx`
 
