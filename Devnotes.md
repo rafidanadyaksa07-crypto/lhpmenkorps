@@ -1,7 +1,13 @@
+# Dev notes — LHP AKPOL (Free Edition)
 
+Context for whoever (human or Claude) picks this project up next.
 
-Website ini dibuat untuk menghilangkan kesenjangan antar-taruna akibat monetisasi LHP dan perbedaan kepemilikan barang. Setiap taruna berhak mendapatkan akses yang sama terhadap LHP secara gratis, umum, dan adil. Dengan mempercepat akses dan pembuatan LHP, waktu dapat dialihkan untuk kegiatan lain yang lebih positif dan bermanfaat. Kesetaraan tercipta ketika sesuatu yang bermanfaat dapat diakses oleh semua, bukan hanya mereka yang mampu mendapatkannya.
+## Why this rebuild exists
 
+An earlier version of this project (paid, token-gated, Google OAuth +
+Midtrans/Duitku) accumulated a lot of fragile patches. This is a from-scratch
+rebuild with the payment/OAuth complexity removed entirely: login is only for
+attributing usage in the admin log, and generation is unlimited and free.
 
 ## Template placeholder design — read this before touching `template_lhp.docx`
 
@@ -72,4 +78,12 @@ gitignored and written atomically (temp file + `os.replace`). On a host like
 Railway, mount a persistent volume at `data/` or every redeploy wipes all
 accounts.
 
+## Explicitly deferred (ask before adding)
 
+- Google OAuth / any "verify identity" step before registering — the
+  brief for this rebuild was explicitly "free of use, login is required only
+  to monitor who is using it," i.e. no gatekeeping.
+- Payment/token systems of any kind.
+- Claude-API-based photo timestamp OCR — real feature, but costs money per
+  call; a free EXIF-metadata fallback exists for photos with real camera
+  metadata (won't read timestamps painted into the image pixels).

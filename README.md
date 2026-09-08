@@ -1,8 +1,10 @@
 # LHP AKPOL — Free Edition
 
-LHP AKPOL MENKOPRS ini dibuat murni untuk menentang monetisasi dan memberikan semua taruna peluang yang sama dan adil beserta menghilangkan penggolongan taruna yang memiliki rezeki lebih dan tidak semua dapat perlakuan yang sama dan adil
+Generates LHP Kegiatan Positif Word documents automatically. No tokens, no
+payment, no gating — every logged-in user can generate unlimited documents.
+Login exists purely so you (the admin) can see who is using the app and what
+they generated.
 
-walaupun begitu fungsi dari suatu website ini adalah "agar memotong waktu yang dimakan oleh taruna untuk membuat laporan secara manual dan agar memfokuskan taruna untuk menggunakan waktunya untuk melakukan kegiatan positif lainnya" -Danmentarsis
 ## Features
 
 - **Self-register** — username + password, instant, no approval needed.
@@ -33,6 +35,16 @@ Visit `http://localhost:5000`.
    reads a `Procfile`).
 2. Set environment variables:
 
+   | Variable | Purpose | Default |
+   |---|---|---|
+   | `SECRET_KEY` | Flask session signing key — **set this in production** | `dev-secret-change-me` |
+   | `ADMIN_USERNAME` | Admin panel login | `admin` |
+   | `ADMIN_PASSWORD` | Admin panel login | `admin123` |
+   | `PORT` | Set automatically by most hosts | `5000` |
+
+3. **Attach a persistent volume mounted at `data/`** — this is where
+   `users.json`, `activity_log.json`, and `visitors.json` live. Without a
+   volume, every redeploy wipes all accounts and history.
 
 ## Updating the Danton/Danki roster
 
@@ -54,8 +66,17 @@ instead. See the comment above that dict for the shape.
 ## What's intentionally NOT included
 
 Compared to the earlier paid version of this project, this build has no
-Google OAuth, no Midtrans/Duitku payment integration, and no AI-vibecoded
+Google OAuth, no Midtrans/Duitku payment integration, and no Claude-API
 photo-timestamp scanning (that feature costs money per use — ask if you want
 it added back; a free EXIF-based fallback is also possible for photos that
 carry real camera metadata, though it won't read text painted into the image
 itself).
+
+## Devnotes.md
+
+`Devnotes.md` records *why* things are built the way they are — the traps that
+caused real bugs earlier (placeholder ordering, photo overlap, roster matching
+by position rather than name, atomic writes). Read it before changing
+`lhp_core.py` or the Word template. If you make a decision that isn't obvious
+from the code — a personnel override, a new tingkat, a layout constraint —
+add it there so the next session doesn't undo it.

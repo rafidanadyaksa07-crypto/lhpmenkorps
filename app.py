@@ -2,7 +2,7 @@
 """
 LHP AKPOL — free version.
 
-Design decisions (see CLAUDE.md for the full reasoning trail from the
+Design decisions (see Devnotes.md for the full reasoning trail from the
 previous paid iteration of this project):
   - No tokens, no payment, no gating. Anyone with an account can generate
     unlimited documents.

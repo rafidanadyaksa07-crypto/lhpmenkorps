@@ -11,7 +11,7 @@ Layout decisions (learned from real output that came out messy):
   * keep_with_next is set across the signature rows so the block is not
     split across pages, which previously left an almost-empty page.
   * Placeholders are whole tokens ({{NAME}}) each in their own run, so
-    replacement never depends on ordering. See CLAUDE.md.
+    replacement never depends on ordering. See Devnotes.md.
 """
 from docx import Document
 from docx.shared import Pt, Cm, Inches
