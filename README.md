@@ -33,16 +33,6 @@ Visit `http://localhost:5000`.
    reads a `Procfile`).
 2. Set environment variables:
 
-   | Variable | Purpose | Default |
-   |---|---|---|
-   | `SECRET_KEY` | Flask session signing key — **set this in production** | `dev-secret-change-me` |
-   | `ADMIN_USERNAME` | Admin panel login | `admin` |
-   | `ADMIN_PASSWORD` | Admin panel login | `admin123` |
-   | `PORT` | Set automatically by most hosts | `5000` |
-
-3. **Attach a persistent volume mounted at `data/`** — this is where
-   `users.json`, `activity_log.json`, and `visitors.json` live. Without a
-   volume, every redeploy wipes all accounts and history.
 
 ## Updating the Danton/Danki roster
 
@@ -64,7 +54,7 @@ instead. See the comment above that dict for the shape.
 ## What's intentionally NOT included
 
 Compared to the earlier paid version of this project, this build has no
-Google OAuth, no Midtrans/Duitku payment integration, and no Claude-API
+Google OAuth, no Midtrans/Duitku payment integration, and no AI-vibecoded
 photo-timestamp scanning (that feature costs money per use — ask if you want
 it added back; a free EXIF-based fallback is also possible for photos that
 carry real camera metadata, though it won't read text painted into the image
