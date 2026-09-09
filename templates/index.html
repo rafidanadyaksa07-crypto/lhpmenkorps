@@ -18,6 +18,7 @@
       </span>
     <nav>
       <span class="signed-in">{{ user.nama }}</span>
+      {% if user.role == 'pengasuh' %}<a href="/rekap">Rekap</a>{% endif %}
       <a href="/logout">Keluar</a>
     </nav>
   </div>
@@ -80,8 +81,14 @@
 
           <div class="intake-foot" id="upload-summary" hidden>
             <span id="upload-count"></span>
-            <button type="button" class="linkish" id="clear-photos">Hapus semua</button>
+            <span>
+              <button type="button" class="linkish" id="scan-again">Pindai tanggal</button>
+              &nbsp;&nbsp;
+              <button type="button" class="linkish" id="clear-photos">Hapus semua</button>
+            </span>
           </div>
+
+          <div id="scan-box" hidden style="margin-top:14px;"></div>
           <p class="note" id="upload-order-hint" hidden style="margin:10px 0 0;">
             Urutan nomor di atas menentukan urutan foto di lampiran.
           </p>
@@ -229,6 +236,7 @@
    Files are held in a JS array, so choosing again ADDS to the set
    instead of replacing it, and single photos can be removed.     */
 const picked = [];
+let sudahDipindai = false;   // dideklarasikan sebelum addFiles memakainya
 const fileInput  = document.getElementById('foto');
 const dropzone   = document.getElementById('dropzone');
 const grid       = document.getElementById('photo-grid');
@@ -249,6 +257,11 @@ function addFiles(list) {
   }
   renderPhotos();
   if (skipped) showMsg('error', skipped + ' berkas dilewati karena bukan gambar.');
+  // pindai sekali secara otomatis saat foto pertama masuk
+  if (!sudahDipindai && picked.length) {
+    sudahDipindai = true;
+    pindaiFoto();
+  }
 }
 
 function renderPhotos() {
@@ -307,6 +320,77 @@ fileInput.addEventListener('change', e => { addFiles(e.target.files); fileInput.
 dropzone.addEventListener('drop', e => addFiles(e.dataTransfer.files));
 document.getElementById('clear-photos').addEventListener('click', () => {
   picked.length = 0; renderPhotos();
+  document.getElementById('scan-box').hidden = true;
+});
+
+/* ══ pindai tanggal dari foto ══════════════════════════════════
+   Hasil pindaian hanya USULAN. Tidak pernah langsung menimpa isian,
+   karena tanggal yang salah pada dokumen resmi lebih merepotkan
+   daripada mengetik sendiri. Pengguna menekan "Gunakan" untuk memakainya. */
+const scanBox = document.getElementById('scan-box');
+
+const NAMA_BULAN = ['Januari','Februari','Maret','April','Mei','Juni',
+                    'Juli','Agustus','September','Oktober','November','Desember'];
+const NAMA_HARI = ['Minggu','Senin','Selasa','Rabu','Kamis','Jumat','Sabtu'];
+
+function tanggalTerbaca(iso) {
+  const [y, m, d] = iso.split('-').map(Number);
+  const dt = new Date(y, m - 1, d);
+  return `${NAMA_HARI[dt.getDay()]}, ${d} ${NAMA_BULAN[m - 1]} ${y}`;
+}
+
+async function pindaiFoto() {
+  if (!picked.length) return;
+  scanBox.hidden = false;
+  scanBox.innerHTML = '<div class="notice"><span class="spinner" ' +
+    'style="border-color:rgba(23,20,18,.25);border-top-color:#A31621"></span>' +
+    'Membaca tanggal pada foto...</div>';
+
+  const fd = new FormData();
+  picked.slice(0, 4).forEach(f => fd.append('foto', f));
+
+  try {
+    const res = await fetch('/api/scan-photo', { method: 'POST', body: fd });
+    const d = await res.json();
+
+    if (d.found) {
+      const jam = d.waktu ? d.waktu.replace(':', '.') + ' WIB' : 'jam tidak terbaca';
+      scanBox.innerHTML =
+        '<div class="notice notice-ok">' +
+          '<strong>Terbaca dari foto:</strong> ' + tanggalTerbaca(d.tanggal) +
+          ', ' + jam + ' <span class="note">(sumber: ' + d.sumber + ')</span><br>' +
+          '<button type="button" class="linkish" id="scan-pakai">Gunakan tanggal ini</button>' +
+          '&nbsp;&nbsp;<button type="button" class="linkish" id="scan-tutup">Abaikan</button>' +
+        '</div>';
+      document.getElementById('scan-pakai').addEventListener('click', () => {
+        document.getElementById('tanggal').value = d.tanggal;
+        if (d.waktu) document.getElementById('waktu').value = d.waktu;
+        if (d.tempat && !document.getElementById('tempat').value)
+          document.getElementById('tempat').value = d.tempat;
+        ['tanggal','waktu','tempat'].forEach(id => clearError(document.getElementById(id)));
+        updateProgress();
+        scanBox.innerHTML = '<div class="notice notice-ok">Tanggal dan jam sudah diisi. ' +
+          'Periksa kembali, dan ubah sendiri bila keliru.</div>';
+      });
+      document.getElementById('scan-tutup').addEventListener('click', () => {
+        scanBox.hidden = true;
+      });
+    } else {
+      scanBox.innerHTML = '<div class="notice">' + (d.pesan || 'Tanggal tidak ditemukan.') +
+        ' <button type="button" class="linkish" id="scan-tutup2">Tutup</button></div>';
+      document.getElementById('scan-tutup2').addEventListener('click', () => {
+        scanBox.hidden = true;
+      });
+    }
+  } catch {
+    scanBox.innerHTML = '<div class="notice notice-error">Foto gagal dipindai. ' +
+      'Isi tanggal dan jam secara manual.</div>';
+  }
+}
+
+document.getElementById('scan-again').addEventListener('click', () => {
+  sudahDipindai = true;
+  pindaiFoto();
 });
 
 /* ══ kelengkapan isian ═════════════════════════════════════════ */

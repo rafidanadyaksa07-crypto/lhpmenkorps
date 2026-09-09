@@ -87,3 +87,57 @@ accounts.
 - Claude-API-based photo timestamp OCR — real feature, but costs money per
   call; a free EXIF-metadata fallback exists for photos with real camera
   metadata (won't read timestamps painted into the image pixels).
+
+
+## Pemindaian tanggal dari foto
+
+Hanya EXIF (`read_photo_datetime()` di `lhp_core.py`). Gratis, seketika, tanpa
+panggilan ke layanan luar.
+
+**OCR berbayar sudah dihapus atas permintaan pemilik proyek untuk menekan
+biaya.** Jangan menambahkannya kembali tanpa persetujuan, karena biayanya per
+foto dan tidak ada di lembar anggaran. Pengisian manual adalah jalur utama.
+
+EXIF akan sering kosong: metadata hilang bila foto dibagikan lewat WhatsApp,
+disalin dari Word, atau di-screenshot. Itu perilaku yang diharapkan, bukan
+galat. Pesan yang muncul sudah menjelaskan sebabnya dan menyuruh mengisi manual.
+
+Aturan yang tidak boleh dilanggar: hasil pembacaan **tidak pernah langsung
+mengisi formulir**. Selalu ditampilkan sebagai usulan dengan tombol "Gunakan".
+Tanggal salah pada dokumen resmi lebih merepotkan daripada mengetik sendiri.
+
+Berkas foto pindaian dihapus di blok `finally` pada `/api/scan-photo`.
+Jangan hilangkan penghapusan itu.
+
+
+## Penyiapan gambar (HEIC dan pemerkecilan)
+
+`_siapkan_gambar()` di `lhp_core.py` dipanggil untuk setiap foto sebelum
+disisipkan. Dua tugasnya: mengubah HEIC menjadi JPEG (python-docx tidak
+mengenal HEIC) dan memperkecil foto di atas 1600 piksel.
+
+Uji nyata: satu foto 1,8 MB menjadi 293 KB; dokumen empat foto turun dari
+sekitar 7,4 MB menjadi 358 KB.
+
+Pemulihan sandi mandiri **tidak dipakai** atas keputusan pemilik proyek.
+Taruna yang lupa sandi menghubungi pengelola, yang mengaturnya lewat tombol
+"Ganti sandi" di halaman admin.
+
+HEIC bergantung pada `pillow-heif` di `requirements.txt`. Bila pustaka itu
+gagal dipasang, `HEIC_DIDUKUNG` bernilai False dan aplikasi tetap berjalan,
+hanya HEIC yang tidak terbaca. **HEIC belum pernah diuji dengan berkas asli
+dari iPhone**, karena pustakanya tidak tersedia di lingkungan pengembangan.
+Uji dengan satu foto iPhone sungguhan setelah dipasang.
+
+## Peran pengasuh dan halaman rekap
+
+Peran ketiga selain taruna dan pengelola. Ditetapkan pengelola lewat tombol
+"Peran" di halaman admin, berikut lingkup tingkat, kompi, dan peleton.
+
+`_rekap_data()` mengenali taruna dari `defaults` yang tersimpan setelah ia
+membuat dokumen. Akibatnya **taruna yang belum pernah membuat dokumen tidak
+muncul di rekap** — satuannya memang belum diketahui. Ini keterbatasan yang
+disengaja, bukan galat. Bila kelak perlu daftar lengkap, tambahkan pilihan
+satuan saat mendaftar.
+
+Pengasuh hanya melihat lingkupnya sendiri. Pengelola melihat semua.

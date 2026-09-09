@@ -15,6 +15,7 @@ previous paid iteration of this project):
 """
 import os
 import io
+import re
 import json
 import uuid
 import threading
@@ -117,6 +118,7 @@ def record_visit():
         v.setdefault("by_day", {})
         v["by_day"][today] = v["by_day"].get(today, 0) + 1
     _atomic_write(VISITORS_PATH, v)
+
 
 
 # ---------------------------------------------------------------------------
@@ -223,6 +225,7 @@ def check_username():
     return jsonify({"available": available})
 
 
+
 @app.route("/login", methods=["GET", "POST"])
 def login():
     if request.method == "GET":
@@ -308,6 +311,43 @@ def index():
         peleton_list=lc.peleton_numbers(),
         pangkat_list=lc.PANGKAT_LIST,
     )
+
+
+@app.route("/api/scan-photo", methods=["POST"])
+@login_required
+def api_scan_photo():
+    """
+    Baca tanggal dan waktu dari foto yang diunggah.
+    Hasilnya hanya usulan; pengguna yang memutuskan memakainya atau tidak.
+    """
+    files = [f for f in request.files.getlist("foto") if f and f.filename]
+    if not files:
+        return jsonify({"found": False, "error": "Tidak ada foto yang dikirim."}), 400
+
+    job_dir = os.path.join(UPLOAD_DIR, "scan_" + uuid.uuid4().hex)
+    os.makedirs(job_dir, exist_ok=True)
+    try:
+        for i, f in enumerate(files[:4]):        # cukup empat foto pertama
+            ext = os.path.splitext(f.filename)[1] or ".jpg"
+            path = os.path.join(job_dir, f"s{i}{ext}")
+            f.save(path)
+            hasil = lc.scan_photo(path)
+            if hasil:
+                hasil["found"] = True
+                hasil["berkas"] = f.filename
+                return jsonify(hasil)
+
+        return jsonify({
+            "found": False,
+            "pesan": ("Tanggal tidak ditemukan pada foto. Foto yang dibagikan lewat "
+                      "WhatsApp biasanya kehilangan data ini. Isi tanggal dan jam secara manual."),
+        })
+    except Exception as e:
+        app.logger.exception("scan foto gagal")
+        return jsonify({"found": False, "pesan": f"Foto gagal dibaca: {e}"}), 500
+    finally:
+        import shutil
+        shutil.rmtree(job_dir, ignore_errors=True)
 
 
 @app.route("/api/lookup")
@@ -412,6 +452,178 @@ def api_generate():
 # ---------------------------------------------------------------------------
 # Admin panel
 # ---------------------------------------------------------------------------
+
+
+# ---------------------------------------------------------------------------
+# Halaman rekap untuk pengasuh
+# ---------------------------------------------------------------------------
+# Peran "pengasuh" hanya melihat taruna di lingkupnya sendiri, tidak semua.
+# Lingkup ditetapkan pengelola lewat halaman admin.
+def pengasuh_required(view):
+    from functools import wraps
+
+    @wraps(view)
+    def wrapped(*args, **kwargs):
+        if session.get("role") == "admin":
+            return view(*args, **kwargs)
+        u = current_user()
+        if not u or u.get("role") != "pengasuh":
+            return redirect(url_for("index"))
+        return view(*args, **kwargs)
+    return wrapped
+
+
+def _lingkup_teks(l):
+    if not l:
+        return ""
+    bagian = []
+    if l.get("tingkat"): bagian.append("Tk " + str(l["tingkat"]))
+    if l.get("kompi"):   bagian.append("Ki " + str(l["kompi"]))
+    if l.get("peleton"): bagian.append("Ton " + str(l["peleton"]))
+    return ", ".join(bagian) or "semua"
+
+
+def _rekap_data(lingkup, bulan=None):
+    """
+    Susun rekap taruna dalam satu lingkup.
+
+    Taruna dikenali dari 'defaults' yang tersimpan setelah ia membuat dokumen.
+    Akibatnya taruna yang belum pernah membuat dokumen belum muncul di sini --
+    satuannya memang belum diketahui sistem.
+    """
+    bulan = bulan or date.today().strftime("%Y-%m")
+    users = load_users()
+    activity = load_activity()
+
+    tingkat = str(lingkup.get("tingkat") or "")
+    kompi   = str(lingkup.get("kompi") or "").upper()
+    peleton = str(lingkup.get("peleton") or "")
+
+    def cocok(d):
+        if not d:
+            return False
+        if tingkat and str(d.get("tingkat") or "") != tingkat:
+            return False
+        if kompi and str(d.get("kompi") or "").upper() != kompi:
+            return False
+        if peleton and str(d.get("peleton") or "") != peleton:
+            return False
+        return True
+
+    anggota = {u["username"]: u for u in users.values()
+               if u.get("role") != "pengasuh" and cocok(u.get("defaults"))}
+
+    jml_bulan, jml_total, terakhir, kegiatan = {}, {}, {}, {}
+    for e in activity:
+        if e.get("action") != "generate":
+            continue
+        un = e.get("username")
+        if un not in anggota:
+            continue
+        d = e.get("detail") or {}
+        jml_total[un] = jml_total.get(un, 0) + 1
+        if str(e.get("timestamp", "")).startswith(bulan):
+            jml_bulan[un] = jml_bulan.get(un, 0) + 1
+            kegiatan.setdefault(un, []).append(d.get("kegiatan") or "-")
+        if e["timestamp"] > terakhir.get(un, ""):
+            terakhir[un] = e["timestamp"]
+
+    baris = []
+    for un, u in anggota.items():
+        baris.append({
+            "username": un,
+            "nama": (u.get("defaults") or {}).get("nama_taruna") or u.get("nama", ""),
+            "no_akademi": (u.get("defaults") or {}).get("no_akademi", ""),
+            "bulan_ini": jml_bulan.get(un, 0),
+            "total": jml_total.get(un, 0),
+            "terakhir": terakhir.get(un, ""),
+            "kegiatan": kegiatan.get(un, []),
+        })
+    baris.sort(key=lambda r: (r["bulan_ini"], r["nama"].lower()))
+    return baris, bulan
+
+
+@app.route("/rekap")
+@login_required
+@pengasuh_required
+def rekap():
+    u = current_user()
+    lingkup = (u.get("lingkup") or {}) if u else {}
+    if session.get("role") == "admin":
+        lingkup = {"tingkat": request.args.get("tingkat", ""),
+                   "kompi": request.args.get("kompi", ""),
+                   "peleton": request.args.get("peleton", "")}
+    bulan = request.args.get("bulan") or date.today().strftime("%Y-%m")
+    baris, bulan = _rekap_data(lingkup, bulan)
+    return render_template("rekap.html", user=u, lingkup=lingkup,
+                           baris=baris, bulan=bulan,
+                           sudah=sum(1 for b in baris if b["bulan_ini"] > 0),
+                           belum=sum(1 for b in baris if b["bulan_ini"] == 0))
+
+
+@app.route("/rekap/unduh")
+@login_required
+@pengasuh_required
+def rekap_unduh():
+    u = current_user()
+    lingkup = (u.get("lingkup") or {}) if u else {}
+    bulan = request.args.get("bulan") or date.today().strftime("%Y-%m")
+    baris, bulan = _rekap_data(lingkup, bulan)
+
+    from openpyxl import Workbook
+    from openpyxl.styles import Font, PatternFill, Alignment
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Rekap"
+    judul = ["No", "Nama", "No. Akademi", "Nama Pengguna",
+             "Dokumen Bulan Ini", "Total Dokumen", "Terakhir Membuat"]
+    for i, t in enumerate(judul, 1):
+        c = ws.cell(row=1, column=i, value=t)
+        c.font = Font(bold=True, color="FFFFFF")
+        c.fill = PatternFill("solid", fgColor="9E1B22")
+        c.alignment = Alignment(horizontal="center")
+    for i, b in enumerate(baris, 1):
+        ws.cell(row=i + 1, column=1, value=i)
+        ws.cell(row=i + 1, column=2, value=b["nama"])
+        ws.cell(row=i + 1, column=3, value=b["no_akademi"])
+        ws.cell(row=i + 1, column=4, value=b["username"])
+        ws.cell(row=i + 1, column=5, value=b["bulan_ini"])
+        ws.cell(row=i + 1, column=6, value=b["total"])
+        ws.cell(row=i + 1, column=7, value=(b["terakhir"] or "")[:10])
+    for col, w in zip("ABCDEFG", (5, 30, 16, 18, 18, 16, 18)):
+        ws.column_dimensions[col].width = w
+    ws.freeze_panes = "A2"
+
+    buf = io.BytesIO()
+    wb.save(buf)
+    buf.seek(0)
+    log_activity(u["username"] if u else "admin", "unduh_rekap", {"bulan": bulan})
+    return send_file(buf, as_attachment=True,
+                     download_name=f"Rekap_LHP_{bulan}.xlsx",
+                     mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+
+
+@app.route("/api/admin/set-peran", methods=["POST"])
+@admin_required
+def admin_set_peran():
+    data = request.json or {}
+    uid = data.get("uid")
+    peran = data.get("peran", "user")
+    users = load_users()
+    if uid not in users:
+        return jsonify({"ok": False, "error": "Akun tidak ditemukan"}), 404
+    if peran not in ("user", "pengasuh"):
+        return jsonify({"ok": False, "error": "Peran tidak dikenal"}), 400
+    users[uid]["role"] = peran
+    users[uid]["lingkup"] = {
+        "tingkat": str(data.get("tingkat") or ""),
+        "kompi": str(data.get("kompi") or "").upper(),
+        "peleton": str(data.get("peleton") or ""),
+    } if peran == "pengasuh" else {}
+    save_users(users)
+    return jsonify({"ok": True})
+
+
 @app.route("/admin")
 @admin_required
 def admin_panel():
@@ -437,6 +649,8 @@ def admin_panel():
             "created_at": u.get("created_at", ""),
             "last_seen": last_seen.get(u["username"], ""),
             "generate_count": gen_counts.get(u["username"], 0),
+            "role": u.get("role", "user"),
+            "lingkup_teks": _lingkup_teks(u.get("lingkup")),
         })
     user_rows.sort(key=lambda r: (r["generate_count"], r["created_at"]), reverse=True)
 

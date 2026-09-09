@@ -19,6 +19,12 @@ import unicodedata
 from datetime import datetime
 
 import openpyxl
+try:
+    from pillow_heif import register_heif_opener
+    register_heif_opener()          # agar Pillow bisa membuka .heic dari iPhone
+    HEIC_DIDUKUNG = True
+except Exception:
+    HEIC_DIDUKUNG = False
 from docx import Document
 from docx.shared import Cm, Pt
 from docx.enum.text import WD_ALIGN_PARAGRAPH
@@ -356,6 +362,43 @@ def _replace_everywhere(doc, values):
                                 _replace_in_paragraph(p2, values)
 
 
+
+def _siapkan_gambar(path, maks_piksel=1600, mutu=85):
+    """
+    Siapkan foto sebelum dimasukkan ke dokumen.
+
+    Dua tugas:
+      1. HEIC dari iPhone diubah menjadi JPEG, karena python-docx tidak
+         mengenal HEIC dan akan melempar galat.
+      2. Foto di atas 1600 piksel diperkecil. Sebelumnya berkas asli ikut
+         tertanam utuh -- empat foto iPhone 5 MB menghasilkan dokumen 20 MB
+         yang berat dibuka dan dikirim. Lebar 1600 piksel masih tajam pada
+         ukuran cetak lampiran.
+
+    Bila apa pun gagal, jalur aslinya dikembalikan agar dokumen tetap
+    tersusun.
+    """
+    try:
+        from PIL import Image
+    except Exception:
+        return path
+
+    perlu_ubah = path.lower().endswith((".heic", ".heif"))
+    try:
+        with Image.open(path) as im:
+            perlu_kecil = max(im.size) > maks_piksel
+            if not perlu_ubah and not perlu_kecil:
+                return path
+            im = im.convert("RGB")
+            if perlu_kecil:
+                im.thumbnail((maks_piksel, maks_piksel), Image.LANCZOS)
+            keluar = os.path.splitext(path)[0] + "_siap.jpg"
+            im.save(keluar, "JPEG", quality=mutu, optimize=True)
+            return keluar
+    except Exception:
+        return path
+
+
 def _insert_photos(doc, photo_paths, cols=2):
     """
     Lay photos out in a borderless grid.
@@ -393,6 +436,8 @@ def _insert_photos(doc, photo_paths, cols=2):
     for row in table.rows:
         for c in row.cells:
             c.width = col_w
+
+    photo_paths = [_siapkan_gambar(p) for p in photo_paths]
 
     for idx, path in enumerate(photo_paths):
         cell = table.rows[idx // cols].cells[idx % cols]
@@ -452,3 +497,67 @@ def generate_document(form, photo_paths, output_path):
     _insert_photos(doc, photo_paths)
     doc.save(output_path)
     return meta
+
+# ---------------------------------------------------------------------------
+# Membaca tanggal dan waktu dari foto
+# ---------------------------------------------------------------------------
+# Hanya membaca EXIF, yaitu metadata bawaan kamera. Tanpa biaya sama sekali
+# dan tanpa panggilan ke layanan luar.
+#
+# Pembacaan tulisan tanggal yang tercetak di gambar (OCR) SENGAJA TIDAK
+# dipakai karena berbiaya per foto. Pengisian manual adalah jalur utama.
+#
+# Hasil pembacaan hanya USULAN. Pengguna tetap harus menyetujui sebelum
+# masuk ke formulir, dan kolomnya tetap bisa diketik sendiri.
+
+_EXIF_DATE_TAGS = (36867, 36868, 306)   # DateTimeOriginal, Digitized, DateTime
+
+
+def _parse_exif_datetime(text):
+    """'2026:05:31 22:22:07' -> ('2026-05-31', '22:22')"""
+    m = re.match(r"^(\d{4})[:\-](\d{2})[:\-](\d{2})[ T](\d{2}):(\d{2})", str(text or "").strip())
+    if not m:
+        return None
+    y, mo, d, hh, mm = m.groups()
+    try:
+        datetime(int(y), int(mo), int(d), int(hh), int(mm))
+    except ValueError:
+        return None
+    return f"{y}-{mo}-{d}", f"{hh}:{mm}"
+
+
+def read_photo_datetime(path):
+    """Baca tanggal dan waktu dari EXIF. Kembalikan None bila tidak ada."""
+    try:
+        from PIL import Image
+    except Exception:
+        return None
+    try:
+        with Image.open(path) as im:
+            exif = im.getexif()
+            if not exif:
+                return None
+
+            for tag in _EXIF_DATE_TAGS:
+                got = _parse_exif_datetime(exif.get(tag))
+                if got:
+                    return {"tanggal": got[0], "waktu": got[1], "sumber": "EXIF"}
+
+            # sebagian kamera hanya menulis tanggal pada blok GPS
+            gps = exif.get_ifd(0x8825) if hasattr(exif, "get_ifd") else None
+            if gps:
+                stamp = str(gps.get(29) or "").strip()
+                t = gps.get(7)
+                if stamp and t and len(t) >= 2:
+                    got = _parse_exif_datetime(
+                        f"{stamp} {int(t[0]):02d}:{int(t[1]):02d}:00")
+                    if got:
+                        return {"tanggal": got[0], "waktu": got[1], "sumber": "EXIF GPS"}
+    except Exception:
+        return None
+    return None
+
+
+def scan_photo(path):
+    """Hanya membaca EXIF. Tidak ada layanan berbayar di jalur ini."""
+    return read_photo_datetime(path)

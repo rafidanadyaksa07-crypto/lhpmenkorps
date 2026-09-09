@@ -18,6 +18,7 @@
       </span>
     <nav>
       <span class="signed-in">Pengelola</span>
+      <a href="/rekap">Rekap</a>
       <a href="/app">Susun laporan</a>
       <a href="/admin/logout">Keluar</a>
     </nav>
@@ -60,7 +61,7 @@
         <thead>
           <tr>
             <th>Nama</th><th>Pengguna</th><th>Terdaftar</th>
-            <th>Terakhir aktif</th><th>Dokumen</th><th></th>
+            <th>Terakhir aktif</th><th>Dokumen</th><th>Peran</th><th></th>
           </tr>
         </thead>
         <tbody>
@@ -72,6 +73,14 @@
             <td class="num">{% if u.last_seen %}{{ u.last_seen[:10] }}{% else %}&mdash;{% endif %}</td>
             <td class="num">{{ u.generate_count }}</td>
             <td>
+              {% if u.role == 'pengasuh' %}
+                <span class="tag tag-generate">pengasuh</span>
+                <span class="note">{{ u.lingkup_teks }}</span>
+              {% else %}<span class="note">taruna</span>{% endif %}
+            </td>
+            <td>
+              <button class="linkish" onclick="aturPeran('{{ u.uid }}', '{{ u.nama }}', '{{ u.role }}')">Peran</button>
+              &nbsp;&nbsp;
               <button class="linkish" onclick="resetPassword('{{ u.uid }}')">Ganti sandi</button>
               &nbsp;&nbsp;
               <button class="linkish" onclick="deleteUser('{{ u.uid }}', '{{ u.nama }}')">Hapus</button>
@@ -79,7 +88,7 @@
           </tr>
           {% endfor %}
           <tr class="empty-row" id="user-empty" hidden>
-            <td colspan="6">Tidak ada pengguna yang cocok.</td>
+            <td colspan="7">Tidak ada pengguna yang cocok.</td>
           </tr>
         </tbody>
       </table>
@@ -175,6 +184,36 @@ async function deleteUser(uid, nama) {
   });
   if (res.ok) document.querySelector('tr[data-uid="' + uid + '"]')?.remove();
   else alert('Akun tidak bisa dihapus.');
+}
+
+async function aturPeran(uid, nama, peranSekarang) {
+  const jadi = confirm('Jadikan ' + nama + ' sebagai PENGASUH?\n\n' +
+    'OK = pengasuh, bisa melihat rekap taruna di lingkupnya\n' +
+    'Batal = kembalikan menjadi taruna biasa');
+  if (!jadi) {
+    if (peranSekarang !== 'pengasuh') return;
+    const r = await fetch('/api/admin/set-peran', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ uid, peran:'user' })
+    });
+    alert((await r.json()).ok ? 'Dikembalikan menjadi taruna.' : 'Gagal.');
+    location.reload();
+    return;
+  }
+  const tingkat = prompt('Tingkat yang diasuh (2 atau 3). Kosongkan bila semua:');
+  if (tingkat === null) return;
+  const kompi = prompt('Kompi yang diasuh (A sampai E). Kosongkan bila semua:');
+  if (kompi === null) return;
+  const peleton = prompt('Peleton yang diasuh (1, 2, atau 3). Kosongkan bila semua:');
+  if (peleton === null) return;
+
+  const r = await fetch('/api/admin/set-peran', {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({ uid, peran:'pengasuh', tingkat, kompi, peleton })
+  });
+  const d = await r.json();
+  alert(d.ok ? 'Peran diperbarui.' : ('Gagal: ' + d.error));
+  location.reload();
 }
 
 async function resetPassword(uid) {
