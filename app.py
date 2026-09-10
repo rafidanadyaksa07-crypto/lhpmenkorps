@@ -48,10 +48,23 @@ app.secret_key = os.environ.get("SECRET_KEY", "dev-secret-change-me")
 # message via the 413 handler rather than a dropped connection.
 app.config["MAX_CONTENT_LENGTH"] = 40 * 1024 * 1024  # 40 MB total per request
 
+
+# Nama yang tampil di kaki setiap halaman. Ubah di sini, atau timpa lewat
+# env var PEMBUAT di Railway tanpa menyentuh kode.
+PEMBUAT = os.environ.get("PEMBUAT", "Rafi Danadyaksa")
+
 ADMIN_USERNAME = os.environ.get("ADMIN_USERNAME", "admin")
 ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD", "admin123")
 
 MAX_ACTIVITY_ENTRIES = 5000  # trim old entries so the file doesn't grow forever
+
+
+
+
+@app.context_processor
+def _nilai_bersama():
+    """Tersedia di setiap templat tanpa perlu dioper satu per satu."""
+    return {"pembuat": PEMBUAT, "tahun": date.today().year}
 
 
 # ---------------------------------------------------------------------------
@@ -464,10 +477,18 @@ def pengasuh_required(view):
 
     @wraps(view)
     def wrapped(*args, **kwargs):
+        # Pengelola dilayani lebih dulu. Sesi admin bukan akun biasa, sehingga
+        # current_user() bernilai None untuknya -- itulah sebabnya rute ini
+        # TIDAK memakai login_required, karena penjaga itu akan menolaknya.
         if session.get("role") == "admin":
             return view(*args, **kwargs)
+        if "uid" not in session:
+            return redirect(url_for("login"))
         u = current_user()
-        if not u or u.get("role") != "pengasuh":
+        if not u:
+            session.clear()
+            return redirect(url_for("login"))
+        if u.get("role") != "pengasuh":
             return redirect(url_for("index"))
         return view(*args, **kwargs)
     return wrapped
@@ -544,7 +565,6 @@ def _rekap_data(lingkup, bulan=None):
 
 
 @app.route("/rekap")
-@login_required
 @pengasuh_required
 def rekap():
     u = current_user()
@@ -562,7 +582,6 @@ def rekap():
 
 
 @app.route("/rekap/unduh")
-@login_required
 @pengasuh_required
 def rekap_unduh():
     u = current_user()

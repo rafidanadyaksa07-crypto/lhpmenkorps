@@ -63,6 +63,14 @@ If a Danki/Danton is temporarily standing in for another kompi, don't hand-edit
 the generated document each time — add an entry to `lhp_core.PERSONNEL_OVERRIDES`
 instead. See the comment above that dict for the shape.
 
+## What's intentionally NOT included
+
+Compared to the earlier paid version of this project, this build has no
+Google OAuth, no Midtrans/Duitku payment integration, and no Claude-API
+photo-timestamp scanning (that feature costs money per use — ask if you want
+it added back; a free EXIF-based fallback is also possible for photos that
+carry real camera metadata, though it won't read text painted into the image
+itself).
 
 ## Devnotes.md
 

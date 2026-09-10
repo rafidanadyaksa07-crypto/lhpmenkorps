@@ -482,3 +482,33 @@ td .mono, td.num { font-family: var(--mono); font-variant-numeric: tabular-nums;
   .photo-item img { height: 100px; }
   .lift { margin-top: -34px; }
 }
+
+/* di halaman gelap, kaki dibuat menyatu dengan latar terang di bawahnya */
+
+.jejak {
+  max-width: 1060px;
+  margin: 46px auto 0;
+  padding: 0 26px 34px;
+  text-align: center;
+}
+.jejak-garis {
+  width: 68px;
+  margin: 0 auto 14px;
+  opacity: .55;
+}
+.jejak p { margin: 0; letter-spacing: .01em; }
+.jejak-nama { font-size: 13.5px; color: var(--graphite); }
+.jejak-sub  { font-size: 12px; color: #8A837D; margin-top: 3px !important; }
+.jejak strong {
+  font-weight: 600;
+  color: var(--oxblood);
+}
+.jejak-tahun {
+  font-family: var(--mono);
+  font-size: 11.5px;
+  margin-left: 8px;
+  color: #8A837D;
+}
+@media (max-width: 620px) {
+  .jejak { margin-top: 34px; padding: 0 16px 26px; }
+}
