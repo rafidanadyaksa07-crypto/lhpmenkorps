@@ -239,6 +239,12 @@ def check_username():
 
 
 
+@app.route("/bantuan")
+def bantuan():
+    """Terbuka untuk umum: taruna perlu bisa membacanya sebelum mendaftar."""
+    return render_template("bantuan.html", user=current_user())
+
+
 @app.route("/login", methods=["GET", "POST"])
 def login():
     if request.method == "GET":

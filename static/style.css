@@ -512,3 +512,36 @@ td .mono, td.num { font-family: var(--mono); font-variant-numeric: tabular-nums;
 @media (max-width: 620px) {
   .jejak { margin-top: 34px; padding: 0 16px 26px; }
 }
+
+/* ── halaman pertanyaan umum ──────────────────────────────────── */
+.tanya-judul {
+  font-family: var(--display); font-weight: 500;
+  font-size: 13px; letter-spacing: .1em; text-transform: uppercase;
+  color: var(--red); margin: 28px 0 8px;
+}
+.tanya-judul:first-child { margin-top: 0; }
+
+.tanya {
+  background: var(--paper);
+  border: 1px solid var(--rule);
+  margin-bottom: -1px;
+}
+.tanya summary {
+  padding: 14px 44px 14px 18px;
+  cursor: pointer; position: relative;
+  font-size: 15.5px; line-height: 1.45;
+  list-style: none;
+}
+.tanya summary::-webkit-details-marker { display: none; }
+.tanya summary::after {
+  content: '+';
+  position: absolute; right: 18px; top: 50%; transform: translateY(-50%);
+  font-family: var(--mono); font-size: 17px; color: var(--red);
+}
+.tanya[open] summary::after { content: '\2212'; }
+.tanya[open] summary { font-weight: 600; border-bottom: 1px solid var(--rule-soft); }
+.tanya summary:hover { background: #FBFAF8; }
+.tanya .jawab { padding: 16px 18px 6px; }
+.tanya .jawab p { font-size: 15px; color: var(--graphite); }
+.tanya .jawab p:last-child { margin-bottom: 12px; }
+.tanya .jawab strong { color: var(--ink); }
