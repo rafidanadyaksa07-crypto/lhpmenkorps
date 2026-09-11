@@ -42,9 +42,15 @@ Visit `http://localhost:5000`.
    | `ADMIN_PASSWORD` | Admin panel login | `admin123` |
    | `PORT` | Set automatically by most hosts | `5000` |
 
-3. **Attach a persistent volume mounted at `data/`** — this is where
-   `users.json`, `activity_log.json`, and `visitors.json` live. Without a
-   volume, every redeploy wipes all accounts and history.
+3. **Pasang Volume agar akun tidak hilang.** Railway → service → Variables →
+   Volumes → New Volume, mount path bebas, misalnya `/data`.
+
+   Aplikasi membaca `RAILWAY_VOLUME_MOUNT_PATH` yang diisi Railway secara
+   otomatis, jadi tidak perlu mengatur apa pun lagi. Bila ingin menentukan
+   sendiri, isi env var `DATA_DIR`.
+
+   Tanpa Volume, seluruh akun hilang setiap kali aplikasi dipasang ulang.
+   Buka `/health` untuk memastikan: `"penyimpanan_permanen": true`.
 
 ## Updating the Danton/Danki roster
 

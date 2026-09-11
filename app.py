@@ -31,14 +31,60 @@ from werkzeug.security import generate_password_hash, check_password_hash
 import lhp_core as lc
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-DATA_DIR = os.path.join(BASE_DIR, "data")
-UPLOAD_DIR = os.path.join(BASE_DIR, "data", "tmp_uploads")
+
+# ---------------------------------------------------------------------------
+# Tempat penyimpanan data akun
+# ---------------------------------------------------------------------------
+# Urutan pencarian:
+#   1. DATA_DIR                    -- bila diisi sendiri di Railway
+#   2. RAILWAY_VOLUME_MOUNT_PATH   -- diisi Railway otomatis saat volume dipasang
+#   3. <folder aplikasi>/data      -- cadangan terakhir, TIDAK PERMANEN
+#
+# Pilihan ketiga hilang setiap kali aplikasi dipasang ulang, sehingga seluruh
+# akun ikut terhapus. Karena itu PENYIMPANAN_PERMANEN dipakai untuk memberi
+# peringatan di halaman pengelola dan di /health.
+_volume = os.environ.get("DATA_DIR") or os.environ.get("RAILWAY_VOLUME_MOUNT_PATH")
+PENYIMPANAN_PERMANEN = bool(_volume)
+DATA_DIR = _volume or os.path.join(BASE_DIR, "data")
+UPLOAD_DIR = os.path.join(DATA_DIR, "tmp_uploads")
 os.makedirs(DATA_DIR, exist_ok=True)
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 
 USERS_PATH = os.path.join(DATA_DIR, "users.json")
 ACTIVITY_PATH = os.path.join(DATA_DIR, "activity_log.json")
 VISITORS_PATH = os.path.join(DATA_DIR, "visitors.json")
+
+
+def _pindahkan_data_lama():
+    """
+    Saat volume baru dipasang, salin data dari folder lama yang tidak permanen
+    supaya akun yang sudah terlanjur dibuat tidak hilang. Hanya berjalan bila
+    berkas di volume belum ada, jadi aman dipanggil setiap kali aplikasi mulai.
+    """
+    if not PENYIMPANAN_PERMANEN:
+        return
+    lama_dir = os.path.join(BASE_DIR, "data")
+    if os.path.abspath(lama_dir) == os.path.abspath(DATA_DIR):
+        return
+    import shutil
+    for nama in ("users.json", "activity_log.json", "visitors.json"):
+        lama, baru = os.path.join(lama_dir, nama), os.path.join(DATA_DIR, nama)
+        if os.path.exists(lama) and not os.path.exists(baru):
+            try:
+                shutil.copy2(lama, baru)
+                print(f"[data] {nama} disalin dari folder lama ke volume")
+            except Exception as e:
+                print(f"[data] gagal menyalin {nama}: {e}")
+
+
+_pindahkan_data_lama()
+
+if PENYIMPANAN_PERMANEN:
+    print(f"[data] penyimpanan permanen aktif di {DATA_DIR}")
+else:
+    print("[data] PERINGATAN: penyimpanan TIDAK permanen. "
+          "Seluruh akun akan hilang setiap kali aplikasi dipasang ulang. "
+          "Pasang Volume di Railway, lalu arahkan ke folder itu.")
 
 _lock = threading.Lock()
 
@@ -299,6 +345,8 @@ def health():
         "word_template": os.path.exists(lc.TEMPLATE_PATH),
         "logo": os.path.exists(os.path.join(BASE_DIR, "static", "logo_akpol.png")),
         "data_dir_writable": os.access(DATA_DIR, os.W_OK),
+        "penyimpanan_permanen": PENYIMPANAN_PERMANEN,
+        "lokasi_data": DATA_DIR,
         "tingkat_loaded": tingkat_loaded,
         "roster_error": lc.ROSTER_ERROR,
         "users_registered": len(load_users()),
@@ -307,6 +355,9 @@ def health():
         checks["excel_roster"], checks["word_template"],
         checks["data_dir_writable"], tingkat_loaded,
     ])
+    if not PENYIMPANAN_PERMANEN:
+        checks["peringatan"] = ("Penyimpanan tidak permanen. Seluruh akun akan "
+                                "hilang setiap kali aplikasi dipasang ulang.")
     return jsonify(checks), (200 if checks["ok"] else 503)
 
 
@@ -694,6 +745,8 @@ def admin_panel():
         total_users=len(users),
         total_generated=sum(gen_counts.values()),
         generated_today=generated_today,
+        penyimpanan_permanen=PENYIMPANAN_PERMANEN,
+        lokasi_data=DATA_DIR,
     )
 
 

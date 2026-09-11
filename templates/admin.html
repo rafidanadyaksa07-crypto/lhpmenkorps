@@ -27,6 +27,15 @@
 
 <main class="sheet">
 
+  {% if not penyimpanan_permanen %}
+  <div class="notice notice-error" role="alert" style="margin-bottom:22px;">
+    <strong>Penyimpanan belum permanen.</strong>
+    Seluruh akun dan catatan akan hilang setiap kali aplikasi dipasang ulang.
+    Pasang <em>Volume</em> di Railway, lalu pasang ulang aplikasinya.
+    <span class="note">Lokasi data sekarang: {{ lokasi_data }}</span>
+  </div>
+  {% endif %}
+
   <div class="tally-strip">
     <div class="tally-cell">
       <div class="fig">{{ '%02d'|format(total_users) }}</div>
