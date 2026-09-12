@@ -341,26 +341,141 @@ def build_placeholder_values(form):
 # Document filling
 # ---------------------------------------------------------------------------
 def _replace_in_paragraph(paragraph, values):
-    for run in paragraph.runs:
-        for token, val in values.items():
-            if token in run.text:
-                run.text = run.text.replace(token, val)
+    """
+    Ganti placeholder di dalam satu paragraf, termasuk yang terbelah.
+
+    Word kerap memecah satu kata menjadi beberapa run tanpa alasan yang
+    terlihat -- riwayat penyuntingan, pemeriksa ejaan, atau salin-tempel.
+    Akibatnya "{{TTD_TEMPAT_TANGGAL}}" bisa tersimpan sebagai "{{" lalu
+    "TTD_TEMPAT_TANGGAL}}" pada dua run terpisah.
+
+    Mengganti per run akan melewatkan kasus itu dan placeholder tercetak apa
+    adanya di dokumen resmi. Karena itu teks seluruh paragraf disambung dulu,
+    lalu penggantian ditulis kembali ke run pertama yang terlibat -- sehingga
+    huruf tebal, miring, dan ukurannya tetap mengikuti placeholder aslinya.
+    """
+    for _ in range(100):                       # batas aman dari putaran tak berujung
+        runs = paragraph.runs
+        if not runs:
+            return
+        gabung = "".join(r.text for r in runs)
+        if "{{" not in gabung:
+            return
+
+        temuan = None
+        for token, nilai in values.items():
+            i = gabung.find(token)
+            if i != -1:
+                temuan = (i, token, nilai)
+                break
+        if temuan is None:
+            return
+
+        mulai, token, nilai = temuan
+        akhir = mulai + len(token)
+
+        batas, pos = [], 0
+        for r in runs:
+            batas.append((pos, pos + len(r.text)))
+            pos += len(r.text)
+
+        kena = [i for i, (a, b) in enumerate(batas) if a < akhir and b > mulai]
+        if not kena:
+            return
+
+        pertama, terakhir = kena[0], kena[-1]
+        awal_p = batas[pertama][0]
+        awal_t = batas[terakhir][0]
+        depan = runs[pertama].text[: mulai - awal_p]
+        belakang = runs[terakhir].text[akhir - awal_t:]
+
+        if pertama == terakhir:
+            runs[pertama].text = depan + nilai + belakang
+        else:
+            runs[pertama].text = depan + nilai
+            for i in kena[1:-1]:
+                runs[i].text = ""
+            runs[terakhir].text = belakang
+
+
+def _semua_paragraf(doc):
+    """
+    Hasilkan SELURUH paragraf dokumen, termasuk yang bersarang.
+
+    Sebelumnya hanya badan dokumen dan tabel satu tingkat yang disusuri,
+    sehingga placeholder di kop halaman, kaki halaman, atau tabel di dalam
+    tabel tidak pernah tergantikan dan tercetak apa adanya.
+    """
+    def dari_tabel(tabel):
+        for baris in tabel.rows:
+            for sel in baris.cells:
+                for p in sel.paragraphs:
+                    yield p
+                for t in sel.tables:          # tabel bersarang, sedalam apa pun
+                    yield from dari_tabel(t)
+
+    for p in doc.paragraphs:
+        yield p
+    for t in doc.tables:
+        yield from dari_tabel(t)
+
+    for bagian in doc.sections:
+        for wadah in (bagian.header, bagian.footer,
+                      bagian.even_page_header, bagian.even_page_footer,
+                      bagian.first_page_header, bagian.first_page_footer):
+            if wadah is None:
+                continue
+            try:
+                for p in wadah.paragraphs:
+                    yield p
+                for t in wadah.tables:
+                    yield from dari_tabel(t)
+            except Exception:
+                continue
 
 
 def _replace_everywhere(doc, values):
-    for p in doc.paragraphs:
+    for p in _semua_paragraf(doc):
         _replace_in_paragraph(p, values)
-    for table in doc.tables:
-        for row in table.rows:
-            for cell in row.cells:
-                for p in cell.paragraphs:
-                    _replace_in_paragraph(p, values)
-                for t in cell.tables:
-                    for r2 in t.rows:
-                        for c2 in r2.cells:
-                            for p2 in c2.paragraphs:
-                                _replace_in_paragraph(p2, values)
 
+
+def _sapu_sisa(doc):
+    """
+    Jaring pengaman terakhir.
+
+    Bila karena satu dan lain hal masih ada placeholder yang belum
+    tergantikan, kosongkan agar tidak tercetak sebagai "{{NAMA_SESUATU}}"
+    di dokumen resmi. Nama yang tersisa dicatat ke log supaya penyebabnya
+    bisa ditelusuri, bukan disembunyikan diam-diam.
+    """
+    tersisa = set()
+    pola = re.compile(r"\{\{[A-Z0-9_]+\}\}")
+    for p in _semua_paragraf(doc):
+        temuan = pola.findall(p.text)
+        if not temuan:
+            continue
+        tersisa.update(temuan)
+        _replace_in_paragraph(p, {t: "" for t in temuan})
+    if tersisa:
+        print("[template] placeholder tidak dikenali, dikosongkan:",
+              ", ".join(sorted(tersisa)))
+    return sorted(tersisa)
+
+
+def token_template(path=None):
+    """Daftar placeholder yang ada di berkas template. Dipakai /health."""
+    path = path or TEMPLATE_PATH
+    if not os.path.exists(path):
+        return []
+    try:
+        doc = Document(path)
+        pola = re.compile(r"\{\{[A-Z0-9_]+\}\}")
+        hasil = set()
+        for p in _semua_paragraf(doc):
+            hasil.update(pola.findall(p.text))
+        return sorted(hasil)
+    except Exception:
+        return []
 
 
 def _siapkan_gambar(path, maks_piksel=1600, mutu=85):
@@ -412,14 +527,14 @@ def _insert_photos(doc, photo_paths, cols=2):
     marker = "{{LAMPIRAN_FOTO}}"
     target = None
     for p in doc.paragraphs:
-        if any(marker in r.text for r in p.runs):
+        # teks paragraf, bukan per run: penanda pun bisa terbelah oleh Word
+        if marker in p.text:
             target = p
             break
 
     if target is None:
         return
-    for r in target.runs:
-        r.text = r.text.replace(marker, "")
+    _replace_in_paragraph(target, {marker: ""})
 
     if not photo_paths:
         return
@@ -495,6 +610,7 @@ def generate_document(form, photo_paths, output_path):
     values, meta = build_placeholder_values(form)
     _replace_everywhere(doc, values)
     _insert_photos(doc, photo_paths)
+    meta["placeholder_tersisa"] = _sapu_sisa(doc)
     doc.save(output_path)
     return meta
 

@@ -351,6 +351,7 @@ def health():
         "lokasi_data": DATA_DIR,
         "tingkat_loaded": tingkat_loaded,
         "roster_error": lc.ROSTER_ERROR,
+        "token_template": lc.token_template(),
         "users_registered": len(load_users()),
     }
     checks["ok"] = all([
