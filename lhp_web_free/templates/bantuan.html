@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pertanyaan umum — LHP AKPOL</title>
+<meta name="description" content="Jawaban atas pertanyaan yang sering muncul seputar penyusunan LHP Kegiatan Positif.">
+<link rel="icon" href="/static/favicon.png">
+<link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+
+<header class="masthead">
+  <div class="masthead-bar">
+    <span class="wordmark">
+      <img class="crest" src="/static/logo_menkorps.png" alt="">
+      <img class="crest crest-side" src="/static/logo_akpol.png" alt="">
+      LHP Akpol
+    </span>
+    <nav>
+      {% if user %}
+        <a href="/app">Susun laporan</a>
+        <a href="/logout">Keluar</a>
+      {% else %}
+        <a href="/login">Masuk</a>
+      {% endif %}
+    </nav>
+  </div>
+</header>
+
+<main class="sheet">
+  <h1 style="font-family:var(--display); font-weight:500; letter-spacing:.03em;
+             text-transform:uppercase; font-size:26px; margin-bottom:4px;">
+    Pertanyaan umum
+  </h1>
+  <p class="note">Klik pertanyaan untuk melihat jawabannya.</p>
+  <hr class="rule2" style="margin:14px 0 22px;">
+
+  <div class="filters" style="margin-bottom:26px;">
+    <input type="search" id="cari-tanya" placeholder="Cari pertanyaan, misalnya: tanggal, foto, sandi"
+           aria-label="Cari pertanyaan">
+    <button type="button" class="linkish" id="buka-semua">Buka semua</button>
+  </div>
+
+  <div id="daftar-tanya">
+
+  <!-- ══ DASAR ══ -->
+  <h2 class="tanya-judul">Dasar</h2>
+
+  <details class="tanya">
+    <summary>Apakah benar-benar gratis?</summary>
+    <div class="jawab">
+      <p>Ya. Tidak ada biaya, tidak ada token, dan tidak ada batas jumlah dokumen.
+      Buat sepuluh laporan sehari pun tidak masalah.</p>
+    </div>
+  </details>
+
+  <details class="tanya">
+    <summary>Kalau gratis, kenapa harus membuat akun?</summary>
+    <div class="jawab">
+      <p>Akun hanya dipakai untuk mencatat siapa yang memakai aplikasi ini.
+      Tidak ada kaitannya dengan pembayaran. Pendaftarannya pun mandiri,
+      tidak perlu menunggu persetujuan siapa pun.</p>
+    </div>
+  </details>
+
+  <details class="tanya">
+    <summary>Siapa saja yang bisa melihat data saya?</summary>
+    <div class="jawab">
+      <p>Pengelola aplikasi dapat melihat daftar akun dan catatan kegiatan
+      berupa siapa membuat dokumen apa dan kapan.</p>
+      <p>Pengasuh yang ditunjuk dapat melihat rekap taruna di peleton dan
+      kompinya sendiri: berapa dokumen yang sudah dibuat bulan ini dan
+      kegiatan apa saja. Pengasuh tidak bisa membuka isi dokumen Anda.</p>
+      <p>Kata sandi tidak bisa dilihat siapa pun, termasuk pengelola, karena
+      yang disimpan hanya sidik acaknya.</p>
+    </div>
+  </details>
+
+  <details class="tanya">
+    <summary>Bisa dipakai lewat HP?</summary>
+    <div class="jawab">
+      <p>Bisa. Tampilannya menyesuaikan layar kecil. Foto bisa diambil langsung
+      dari galeri ponsel, dan dokumen hasilnya terunduh seperti berkas biasa.</p>
+    </div>
+  </details>
+
+  <!-- ══ MENYUSUN LAPORAN ══ -->
+  <h2 class="tanya-judul">Menyusun laporan</h2>
+
+  <details class="tanya">
+    <summary>Berapa foto yang boleh diunggah?</summary>
+    <div class="jawab">
+      <p>Tidak dibatasi jumlahnya, tetapi seluruh unggahan dalam satu laporan
+      dibatasi 40 MB. Foto disusun dua kolom di halaman lampiran, mengikuti
+      nomor urut yang tampil di bawah setiap foto.</p>
+    </div>
+  </details>
+
+  <details class="tanya">
+    <summary>Bagaimana mengubah urutan foto?</summary>
+    <div class="jawab">
+      <p>Hapus foto yang ingin dipindah dengan tanda silang di pojoknya, lalu
+      unggah kembali. Foto yang diunggah belakangan menempati nomor terakhir.</p>
+    </div>
+  </details>
+
+  <details class="tanya">
+    <summary>Foto iPhone format HEIC bisa dipakai?</summary>
+    <div class="jawab">
+      <p>Bisa. Foto HEIC diubah menjadi JPEG secara otomatis sebelum masuk ke
+      dokumen.</p>
+    </div>
+  </details>
+
+  <details class="tanya">
+    <summary>Kenapa tanggal tidak terbaca otomatis dari foto saya?</summary>
+    <div class="jawab">
+      <p>Aplikasi membaca tanggal dari data tersembunyi di dalam berkas foto,
+      bukan dari tulisan yang tercetak di gambar.</p>
+      <p>Data itu <strong>hilang bila foto dibagikan lewat WhatsApp</strong>,
+      diambil dari tangkapan layar, atau disalin dari dokumen. Karena itu foto
+      kiriman teman biasanya tidak terbaca.</p>
+      <p>Agar terbaca, unggah foto asli langsung dari galeri ponsel Anda
+      sendiri. Kalau tetap tidak terbaca, isi tanggal dan jam secara manual —
+      hasilnya sama saja.</p>
+    </div>
+  </details>
+
+  <details class="tanya">
+    <summary>Hasil pembacaan tanggalnya keliru. Bagaimana?</summary>
+    <div class="jawab">
+      <p>Tekan <strong>Abaikan</strong>, lalu isi sendiri kolom tanggal dan jam.
+      Hasil pembacaan memang hanya usulan dan tidak pernah langsung mengisi
+      formulir, justru supaya kekeliruan seperti ini bisa Anda cegah.</p>
+      <p>Kalau terlanjur ditekan <strong>Gunakan</strong>, kolomnya tetap bisa
+      diketik ulang seperti biasa.</p>
+    </div>
+  </details>
+
+  <details class="tanya">
+    <summary>Data Dantontar atau Dankitar kosong atau salah</summary>
+    <div class="jawab">
+      <p>Tekan <strong>Isi sendiri</strong> di bagian Pengasuh, lalu ketik nama,
+      pangkat, dan NRP secara manual. Selama mode itu aktif, data satuan tidak
+      akan menimpa ketikan Anda.</p>
+      <p>Sebagian NRP memang belum lengkap di data satuan. Bila NRP pengasuh
+      Anda kosong terus-menerus, laporkan ke pengelola agar datanya dilengkapi
+      untuk semua orang.</p>
+    </div>
+  </details>
+
+  <details class="tanya">
+    <summary>Kenapa kompi memakai huruf A sampai E, bukan angka Romawi?</summary>
+    <div class="jawab">
+      <p>Karena data satuan yang berlaku sekarang memakai huruf untuk Tingkat II
+      maupun Tingkat III. Pilih huruf yang sesuai dengan kompi Anda.</p>
+    </div>
+  </details>
+
+  <details class="tanya">
+    <summary>Tingkat I tidak ada di pilihan</summary>
+    <div class="jawab">
+      <p>Data pengasuh Tingkat I memang belum tersedia. Begitu datanya masuk,
+      pilihannya akan muncul sendiri tanpa perlu memperbarui apa pun.</p>
+    </div>
+  </details>
+
+  <details class="tanya">
+    <summary>Kenapa nama dan satuan saya sudah terisi sendiri?</summary>
+    <div class="jawab">
+      <p>Aplikasi mengingat nama, nomor akademi, pangkat, tingkat, kompi, dan
+      peleton dari laporan terakhir Anda, supaya tidak perlu mengetik ulang
+      setiap kali.</p>
+      <p>Nama kegiatan, tanggal, jam, dan tempat sengaja tidak diingat karena
+      selalu berbeda. Bila ingin mengosongkan semuanya, tekan
+      <strong>Kosongkan</strong> pada keterangan hijau di atas formulir.</p>
+    </div>
+  </details>
+
+  <!-- ══ SETELAH DOKUMEN JADI ══ -->
+  <h2 class="tanya-judul">Setelah dokumen jadi</h2>
+
+  <details class="tanya">
+    <summary>Dokumen saya hilang. Bisa diunduh ulang?</summary>
+    <div class="jawab">
+      <p>Belum bisa. Dokumen tidak disimpan di server, jadi
+      <strong>simpan sendiri berkas hasil unduhan Anda</strong>. Bila hilang,
+      isi ulang formulirnya — datanya sebagian besar sudah terisi otomatis,
+      jadi tidak lama.</p>
+    </div>
+  </details>
+
+  <details class="tanya">
+    <summary>Dokumennya boleh diedit setelah diunduh?</summary>
+    <div class="jawab">
+      <p>Boleh. Hasilnya berkas Word biasa, bisa dibuka dan disunting dengan
+      Microsoft Word, WPS Office, atau Google Docs.</p>
+    </div>
+  </details>
+
+  <details class="tanya">
+    <summary>Ada yang salah ketik di dokumen. Perlu ulang dari awal?</summary>
+    <div class="jawab">
+      <p>Tidak perlu. Perbaiki saja kolom yang keliru di formulir, lalu tekan
+      susun ulang. Foto yang sudah diunggah tetap ada selama halamannya belum
+      ditutup.</p>
+    </div>
+  </details>
+
+  <!-- ══ MASALAH AKUN ══ -->
+  <h2 class="tanya-judul">Masalah akun</h2>
+
+  <details class="tanya">
+    <summary>Saya lupa kata sandi</summary>
+    <div class="jawab">
+      <p>Hubungi pengelola. Kata sandi akan diatur ulang setelah identitas Anda
+      dipastikan. Aplikasi ini belum menyediakan pemulihan sandi mandiri.</p>
+    </div>
+  </details>
+
+  <details class="tanya">
+    <summary>Akun saya hilang, harus mendaftar lagi</summary>
+    <div class="jawab">
+      <p>Ini terjadi bila penyimpanan permanen belum dipasang di server,
+      sehingga akun terhapus setiap kali aplikasi diperbarui.</p>
+      <p>Laporkan ke pengelola. Setelah penyimpanan permanen dipasang, akun
+      tidak akan hilang lagi meski aplikasi diperbarui berkali-kali.</p>
+      <p>Pengelola juga menyimpan cadangan akun secara berkala, sehingga akun
+      Anda beserta kata sandinya biasanya dapat dipulihkan.</p>
+    </div>
+  </details>
+
+  <details class="tanya">
+    <summary>Muncul tulisan sesi habis, padahal tadi baru masuk</summary>
+    <div class="jawab">
+      <p>Masuk kembali seperti biasa. Ini terjadi bila aplikasi baru saja
+      diperbarui, dan tidak memengaruhi akun maupun data Anda.</p>
+    </div>
+  </details>
+
+  <details class="tanya">
+    <summary>Nama pengguna saya sudah dipakai orang lain</summary>
+    <div class="jawab">
+      <p>Pilih nama lain. Nama pengguna harus unik, tidak boleh sama antar
+      taruna. Tambahkan angka atau nama belakang untuk membedakan.</p>
+    </div>
+  </details>
+
+  <details class="tanya">
+    <summary>Halaman menunjukkan galat 500</summary>
+    <div class="jawab">
+      <p>Muat ulang halaman terlebih dahulu. Bila masih muncul, laporkan ke
+      pengelola berikut keterangan apa yang sedang Anda lakukan saat itu.
+      Kesalahan seperti ini tercatat di server, sehingga bisa ditelusuri.</p>
+    </div>
+  </details>
+
+  <!-- ══ UNTUK PENGASUH ══ -->
+  <h2 class="tanya-judul">Untuk pengasuh</h2>
+
+  <details class="tanya">
+    <summary>Apa isi halaman Rekap?</summary>
+    <div class="jawab">
+      <p>Daftar taruna di lingkup Anda berikut jumlah dokumen bulan berjalan,
+      total keseluruhan, tanggal terakhir menyusun, dan nama kegiatannya.
+      Bisa disaring untuk menampilkan yang belum menyusun saja, dan bisa
+      diunduh sebagai berkas Excel.</p>
+    </div>
+  </details>
+
+  <details class="tanya">
+    <summary>Ada taruna yang tidak muncul di rekap</summary>
+    <div class="jawab">
+      <p>Taruna baru muncul setelah menyusun dokumen pertamanya, karena satuannya
+      baru diketahui dari isian dokumen tersebut. Taruna yang sudah mendaftar
+      tetapi belum pernah menyusun laporan memang belum tampil.</p>
+    </div>
+  </details>
+
+  <details class="tanya">
+    <summary>Bagaimana cara menjadi pengasuh di aplikasi ini?</summary>
+    <div class="jawab">
+      <p>Pengelola yang menetapkannya, lengkap dengan tingkat, kompi, dan peleton
+      yang Anda asuh. Setelah ditetapkan, tautan <strong>Rekap</strong> akan
+      muncul di bagian atas halaman.</p>
+    </div>
+  </details>
+
+  </div>
+
+  <p class="note" id="tak-ada" hidden style="text-align:center; padding:26px 0;">
+    Tidak ada pertanyaan yang cocok dengan pencarian Anda.
+  </p>
+
+  <div class="panel" style="margin-top:30px;">
+    <h2 class="panel-title">Pertanyaan Anda belum terjawab?</h2>
+    <p class="note" style="margin:0;">
+      Hubungi pengelola aplikasi. Sertakan nama pengguna Anda dan keterangan
+      apa yang sedang dikerjakan saat masalahnya muncul, supaya lebih cepat
+      ditelusuri.
+    </p>
+  </div>
+</main>
+
+{% include "_jejak.html" %}
+
+<script>
+const kotak = document.getElementById('cari-tanya');
+const semua = [...document.querySelectorAll('#daftar-tanya .tanya')];
+const judul = [...document.querySelectorAll('#daftar-tanya .tanya-judul')];
+const takAda = document.getElementById('tak-ada');
+
+kotak.addEventListener('input', () => {
+  const q = kotak.value.trim().toLowerCase();
+  let tampil = 0;
+
+  semua.forEach(d => {
+    const cocok = !q || d.textContent.toLowerCase().includes(q);
+    d.hidden = !cocok;
+    if (cocok) tampil++;
+    if (q && cocok) d.open = true;
+    if (!q) d.open = false;
+  });
+
+  // sembunyikan judul kelompok yang seluruh isinya tersembunyi
+  judul.forEach(h => {
+    let ada = false;
+    let n = h.nextElementSibling;
+    while (n && !n.classList.contains('tanya-judul')) {
+      if (n.classList.contains('tanya') && !n.hidden) { ada = true; break; }
+      n = n.nextElementSibling;
+    }
+    h.hidden = !ada;
+  });
+
+  takAda.hidden = tampil !== 0;
+});
+
+document.getElementById('buka-semua').addEventListener('click', (e) => {
+  const bukaSemua = semua.some(d => !d.open);
+  semua.forEach(d => { if (!d.hidden) d.open = bukaSemua; });
+  e.target.textContent = bukaSemua ? 'Tutup semua' : 'Buka semua';
+});
+</script>
+</body>
+</html>

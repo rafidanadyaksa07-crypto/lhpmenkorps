@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Buku catatan — LHP AKPOL</title>
+<link rel="icon" href="/static/favicon.png">
+<link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+
+<header class="masthead">
+  <div class="masthead-bar">
+    <span class="wordmark">
+        <img class="crest" src="/static/logo_menkorps.png" alt="">
+        <img class="crest crest-side" src="/static/logo_akpol.png" alt="">
+        LHP Akpol
+      </span>
+    <nav>
+      <span class="signed-in">Pengelola</span>
+      <a href="/rekap">Rekap</a>
+      <a href="/app">Susun laporan</a>
+      <a href="/admin/logout">Keluar</a>
+    </nav>
+  </div>
+</header>
+
+<main class="sheet">
+
+  {% if not penyimpanan_permanen %}
+  <div class="notice notice-error" role="alert" style="margin-bottom:22px;">
+    <strong>Penyimpanan belum permanen.</strong>
+    Seluruh akun dan catatan akan hilang setiap kali aplikasi dipasang ulang.
+    Pasang <em>Volume</em> di Railway, lalu pasang ulang aplikasinya.
+    <span class="note">Lokasi data sekarang: {{ lokasi_data }}</span>
+  </div>
+  {% endif %}
+
+  <div class="tally-strip">
+    <div class="tally-cell">
+      <div class="fig">{{ '%02d'|format(total_users) }}</div>
+      <div class="cap">Akun</div>
+    </div>
+    <div class="tally-cell">
+      <div class="fig">{{ '%02d'|format(total_generated) }}</div>
+      <div class="cap">Dokumen</div>
+    </div>
+    <div class="tally-cell">
+      <div class="fig">{{ '%02d'|format(generated_today) }}</div>
+      <div class="cap">Hari ini</div>
+    </div>
+    <div class="tally-cell">
+      <div class="fig">{{ '%02d'|format(visitors.total) }}</div>
+      <div class="cap">Kunjungan</div>
+    </div>
+  </div>
+
+  <section class="panel" style="margin-bottom:26px;">
+    <h2 class="panel-title">Cadangan akun</h2>
+    <hr class="rule2" style="margin:12px 0 18px;">
+
+    <p class="note" style="margin-bottom:18px;">
+      Simpan seluruh akun ke satu berkas, lalu pulihkan kapan pun diperlukan.
+      Berguna sebelum memperbarui aplikasi atau saat berpindah server.
+    </p>
+
+    <div class="row row-2" style="gap:26px;">
+      <div>
+        <h3 class="cadang-judul">Ekspor</h3>
+        <p class="note">
+          Mengunduh seluruh akun berikut sidik kata sandinya. Taruna tetap bisa
+          masuk dengan kata sandi lama setelah berkas ini dipulihkan.
+        </p>
+        <a class="btn btn-outline" href="/api/admin/ekspor-akun">Unduh cadangan</a>
+      </div>
+
+      <div>
+        <h3 class="cadang-judul">Impor</h3>
+        <p class="note">Pilih berkas cadangan hasil ekspor, lalu tentukan caranya.</p>
+
+        <input type="file" id="berkas-cadangan" accept=".json,application/json"
+               style="padding:8px; font-size:13.5px;">
+
+        <label for="mode-impor" style="margin-top:12px;">Cara memulihkan</label>
+        <select id="mode-impor">
+          <option value="gabung">Tambahkan yang belum ada, akun sekarang tidak diubah</option>
+          <option value="timpa">Timpa semuanya dengan isi berkas</option>
+        </select>
+
+        <div style="margin-top:14px;">
+          <button type="button" class="btn btn-solid" id="tombol-impor">Pulihkan akun</button>
+        </div>
+        <div id="hasil-impor" style="margin-top:14px;"></div>
+      </div>
+    </div>
+
+    <div class="notice" style="margin-top:20px;">
+      <strong>Berkas cadangan bersifat rahasia.</strong>
+      Siapa pun yang memilikinya dapat memindahkan seluruh akun ke tempat lain.
+      Simpan seperti Anda menyimpan daftar kata sandi, jangan dibagikan di grup.
+    </div>
+  </section>
+
+  <section class="panel" style="margin-bottom:26px;">
+    <h2 class="panel-title">Pengguna</h2>
+    <hr class="rule2" style="margin:12px 0 20px;">
+
+    {% if users %}
+    <div class="filters">
+      <input type="search" id="user-search" placeholder="Cari nama atau nama pengguna"
+             aria-label="Cari pengguna">
+      <span class="note mono" id="user-shown">{{ users|length }} akun</span>
+    </div>
+    <div class="scroll-x">
+      <table id="user-table">
+        <thead>
+          <tr>
+            <th>Nama</th><th>Pengguna</th><th>Terdaftar</th>
+            <th>Terakhir aktif</th><th>Dokumen</th><th>Peran</th><th></th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for u in users %}
+          <tr data-uid="{{ u.uid }}" data-search="{{ (u.nama ~ ' ' ~ u.username)|lower }}">
+            <td>{{ u.nama }}</td>
+            <td class="mono">{{ u.username }}</td>
+            <td class="num">{{ u.created_at[:10] }}</td>
+            <td class="num">{% if u.last_seen %}{{ u.last_seen[:10] }}{% else %}&mdash;{% endif %}</td>
+            <td class="num">{{ u.generate_count }}</td>
+            <td>
+              {% if u.role == 'pengasuh' %}
+                <span class="tag tag-generate">pengasuh</span>
+                <span class="note">{{ u.lingkup_teks }}</span>
+              {% else %}<span class="note">taruna</span>{% endif %}
+            </td>
+            <td>
+              <button class="linkish" onclick="aturPeran('{{ u.uid }}', '{{ u.nama }}', '{{ u.role }}')">Peran</button>
+              &nbsp;&nbsp;
+              <button class="linkish" onclick="resetPassword('{{ u.uid }}')">Ganti sandi</button>
+              &nbsp;&nbsp;
+              <button class="linkish" onclick="deleteUser('{{ u.uid }}', '{{ u.nama }}')">Hapus</button>
+            </td>
+          </tr>
+          {% endfor %}
+          <tr class="empty-row" id="user-empty" hidden>
+            <td colspan="7">Tidak ada pengguna yang cocok.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <p class="note">Belum ada akun. Nama akan muncul di sini begitu taruna mendaftar.</p>
+    {% endif %}
+  </section>
+
+  <section class="panel">
+    <h2 class="panel-title">Catatan kegiatan</h2>
+    <hr class="rule2" style="margin:12px 0 20px;">
+
+    {% if activity %}
+    <div class="filters">
+      <input type="search" id="act-search" placeholder="Cari pengguna, kegiatan, atau nama taruna"
+             aria-label="Cari catatan">
+      <select id="act-filter" aria-label="Saring menurut jenis">
+        <option value="">Semua jenis</option>
+        <option value="generate">Menyusun dokumen</option>
+        <option value="login">Masuk</option>
+        <option value="register">Mendaftar</option>
+        <option value="logout">Keluar</option>
+      </select>
+    </div>
+    <div class="scroll-x">
+      <table id="act-table">
+        <thead>
+          <tr><th>Waktu (UTC)</th><th>Pengguna</th><th>Jenis</th><th>Rincian</th></tr>
+        </thead>
+        <tbody>
+          {% for a in activity %}
+          <tr data-action="{{ a.action }}"
+              data-search="{{ (a.username ~ ' ' ~ a.action ~ ' ' ~ (a.detail.nama_taruna or '') ~ ' ' ~ (a.detail.kegiatan or ''))|lower }}">
+            <td class="num">{{ a.timestamp[:16].replace('T', ' ') }}</td>
+            <td class="mono">{{ a.username }}</td>
+            <td><span class="tag {% if a.action == 'generate' %}tag-generate{% endif %}">{{ a.action }}</span></td>
+            <td>
+              {% if a.action == 'generate' %}
+                {{ a.detail.nama_taruna }} &mdash; {{ a.detail.kegiatan }}
+                <span class="note">Tingkat {{ a.detail.tingkat }}, Kompi {{ a.detail.kompi }},
+                Peleton {{ a.detail.peleton }}, {{ a.detail.tanggal }}</span>
+              {% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+          <tr class="empty-row" id="act-empty" hidden>
+            <td colspan="4">Tidak ada catatan yang cocok.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <p class="note">Belum ada catatan. Baris muncul saat taruna mendaftar, masuk, atau menyusun dokumen.</p>
+    {% endif %}
+  </section>
+</main>
+
+
+{% include "_jejak.html" %}
+
+<script>
+function wireFilter(tableId, emptyId, inputId, selectId, counterId) {
+  const table = document.getElementById(tableId);
+  if (!table) return;
+  const rows  = [...table.querySelectorAll('tbody tr:not(.empty-row)')];
+  const empty = document.getElementById(emptyId);
+  const input = document.getElementById(inputId);
+  const sel   = selectId ? document.getElementById(selectId) : null;
+  const count = counterId ? document.getElementById(counterId) : null;
+
+  function apply() {
+    const q = (input.value || '').trim().toLowerCase();
+    const action = sel ? sel.value : '';
+    let shown = 0;
+    rows.forEach(r => {
+      const vis = (!q || r.dataset.search.includes(q)) &&
+                  (!action || r.dataset.action === action);
+      r.hidden = !vis;
+      if (vis) shown++;
+    });
+    empty.hidden = shown !== 0;
+    if (count) count.textContent = shown + ' akun';
+  }
+  input.addEventListener('input', apply);
+  sel?.addEventListener('change', apply);
+}
+wireFilter('user-table', 'user-empty', 'user-search', null, 'user-shown');
+wireFilter('act-table',  'act-empty',  'act-search',  'act-filter', null);
+
+async function deleteUser(uid, nama) {
+  if (!confirm('Hapus akun ' + nama + '? Catatan kegiatannya tetap tersimpan.')) return;
+  const res = await fetch('/api/admin/delete-user', {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({ uid })
+  });
+  if (res.ok) document.querySelector('tr[data-uid="' + uid + '"]')?.remove();
+  else alert('Akun tidak bisa dihapus.');
+}
+
+document.getElementById('tombol-impor').addEventListener('click', async () => {
+  const berkas = document.getElementById('berkas-cadangan').files[0];
+  const mode = document.getElementById('mode-impor').value;
+  const kotak = document.getElementById('hasil-impor');
+
+  if (!berkas) {
+    kotak.innerHTML = '<div class="notice notice-error">Pilih berkas cadangan dulu.</div>';
+    return;
+  }
+  const peringatan = mode === 'timpa'
+    ? 'TIMPA SEMUANYA?\n\nSeluruh akun yang ada sekarang akan diganti dengan isi berkas. ' +
+      'Akun yang tidak ada di berkas akan hilang.'
+    : 'Tambahkan akun dari berkas?\n\nAkun yang sudah ada tidak akan diubah.';
+  if (!confirm(peringatan)) return;
+
+  const tombol = document.getElementById('tombol-impor');
+  tombol.disabled = true;
+  tombol.innerHTML = '<span class="spinner"></span>Memulihkan';
+  kotak.innerHTML = '';
+
+  const fd = new FormData();
+  fd.append('berkas', berkas);
+  fd.append('mode', mode);
+
+  try {
+    const res = await fetch('/api/admin/impor-akun', { method: 'POST', body: fd });
+    const d = await res.json();
+    if (d.ok) {
+      kotak.innerHTML = '<div class="notice notice-ok">Selesai. ' +
+        d.ditambah + ' akun ditambahkan, ' +
+        (d.mode === 'timpa' ? d.diganti + ' diganti' : d.dilewati + ' dilewati karena sudah ada') +
+        '. Kini ada ' + d.total_sekarang + ' akun.</div>';
+      setTimeout(() => location.reload(), 2200);
+    } else {
+      kotak.innerHTML = '<div class="notice notice-error">' + d.error + '</div>';
+    }
+  } catch {
+    kotak.innerHTML = '<div class="notice notice-error">Server tidak terjangkau.</div>';
+  }
+  tombol.disabled = false;
+  tombol.textContent = 'Pulihkan akun';
+});
+
+async function aturPeran(uid, nama, peranSekarang) {
+  const jadi = confirm('Jadikan ' + nama + ' sebagai PENGASUH?\n\n' +
+    'OK = pengasuh, bisa melihat rekap taruna di lingkupnya\n' +
+    'Batal = kembalikan menjadi taruna biasa');
+  if (!jadi) {
+    if (peranSekarang !== 'pengasuh') return;
+    const r = await fetch('/api/admin/set-peran', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ uid, peran:'user' })
+    });
+    alert((await r.json()).ok ? 'Dikembalikan menjadi taruna.' : 'Gagal.');
+    location.reload();
+    return;
+  }
+  const tingkat = prompt('Tingkat yang diasuh (2 atau 3). Kosongkan bila semua:');
+  if (tingkat === null) return;
+  const kompi = prompt('Kompi yang diasuh (A sampai E). Kosongkan bila semua:');
+  if (kompi === null) return;
+  const peleton = prompt('Peleton yang diasuh (1, 2, atau 3). Kosongkan bila semua:');
+  if (peleton === null) return;
+
+  const r = await fetch('/api/admin/set-peran', {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({ uid, peran:'pengasuh', tingkat, kompi, peleton })
+  });
+  const d = await r.json();
+  alert(d.ok ? 'Peran diperbarui.' : ('Gagal: ' + d.error));
+  location.reload();
+}
+
+async function resetPassword(uid) {
+  const pw = prompt('Kata sandi baru (enam karakter atau lebih):');
+  if (!pw) return;
+  const res = await fetch('/api/admin/reset-password', {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({ uid, password: pw })
+  });
+  const d = await res.json();
+  alert(d.ok ? 'Kata sandi diganti.' : ('Gagal: ' + d.error));
+}
+</script>
+</body>
+</html>

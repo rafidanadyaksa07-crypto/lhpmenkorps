@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Masuk — LHP AKPOL</title>
+<meta name="description" content="Menyusun Laporan Kegiatan Positif taruna Akademi Kepolisian menjadi dokumen Word berformat resmi.">
+<link rel="icon" href="/static/favicon.png">
+<link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+
+<header class="masthead">
+  <div class="masthead-hero">
+    <div class="crest-pair">
+      <img class="seal" src="/static/logo_menkorps.png" alt="Resimen Korps Akademi Kepolisian">
+      <img class="seal seal-side" src="/static/logo_akpol.png" alt="Akademi Kepolisian">
+    </div>
+    <h1>Laporan kegiatan positif</h1>
+    <hr class="kop-rule">
+    <p>Isi keterangannya sekali, lampirkan fotonya, dan dokumen Word berformat resmi langsung tersusun.</p>
+  </div>
+</header>
+
+<div class="sheet-narrow lift">
+  <div class="panel">
+    <h2 class="panel-title">Masuk</h2>
+    <p class="note" style="margin-bottom:20px;">Gunakan akun yang Anda daftarkan sendiri.</p>
+
+    {% if error %}<div class="notice notice-error" role="alert">{{ error }}</div>{% endif %}
+
+    <form method="post" action="/login" id="login-form">
+      <label for="username">Nama pengguna</label>
+      <input type="text" id="username" name="username" required
+             autocapitalize="off" autocomplete="username" spellcheck="false">
+
+      <label for="password">Kata sandi</label>
+      <input type="password" id="password" name="password" required
+             autocomplete="current-password">
+
+      <div style="margin-top:26px;">
+        <button class="btn btn-solid btn-wide" type="submit" id="login-btn">Masuk</button>
+      </div>
+    </form>
+
+    <p class="note" style="text-align:center; margin:18px 0 0;">
+      Belum terdaftar? <a href="/register">Buat akun</a>
+    </p>
+  </div>
+
+  <p class="note" style="text-align:center; margin-top:16px;">
+    <a href="/bantuan">Pertanyaan umum</a>
+    &nbsp;&middot;&nbsp;
+    <a href="/login-admin">Masuk sebagai pengelola</a>
+  </p>
+</div>
+
+<div class="brief">
+  <hr class="rule2">
+  <div class="brief-item">
+    <span class="n">01</span>
+    <div>
+      <h3>Lampirkan foto kegiatan</h3>
+      <p>Jatuhkan beberapa foto sekaligus. Semuanya tersusun rapi di halaman lampiran.</p>
+    </div>
+  </div>
+  <div class="brief-item">
+    <span class="n">02</span>
+    <div>
+      <h3>Tentukan tingkat, kompi, dan peleton</h3>
+      <p>Nama, pangkat, dan NRP Dantontar serta Dankitar terisi dari data satuan.</p>
+    </div>
+  </div>
+  <div class="brief-item">
+    <span class="n">03</span>
+    <div>
+      <h3>Unduh dokumennya</h3>
+      <p>Berkas Word siap cetak. Keterangan diri Anda tersimpan untuk laporan berikutnya.</p>
+    </div>
+  </div>
+</div>
+
+
+{% include "_jejak.html" %}
+
+<script>
+const u = document.getElementById('username');
+u.focus();
+{% if error %}u.select();{% endif %}
+
+document.getElementById('login-form').addEventListener('submit', () => {
+  if (!u.value.trim() || !document.getElementById('password').value) return;
+  const b = document.getElementById('login-btn');
+  b.disabled = true;
+  b.innerHTML = '<span class="spinner"></span>Masuk';
+});
+</script>
+</body>
+</html>

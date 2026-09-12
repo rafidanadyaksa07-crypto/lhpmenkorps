@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{ title }} — LHP AKPOL</title>
+<link rel="icon" href="/static/favicon.png">
+<link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+
+<header class="masthead">
+  <div class="masthead-bar">
+    <span class="wordmark">
+        <img class="crest" src="/static/logo_menkorps.png" alt="">
+        <img class="crest crest-side" src="/static/logo_akpol.png" alt="">
+        LHP Akpol
+      </span>
+  </div>
+</header>
+
+<div class="stop">
+  <div class="code">{{ code }}</div>
+  <h1>{{ title }}</h1>
+  <hr class="rule2 rule2-brass" style="width:120px; margin:0 auto 20px;">
+  <p>{{ message }}</p>
+  <a class="btn btn-outline" href="{{ back_url }}">{{ back_label }}</a>
+</div>
+
+
+{% include "_jejak.html" %}
+</body>
+</html>

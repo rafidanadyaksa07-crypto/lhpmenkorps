@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Rekap LHP — LHP AKPOL</title>
+<link rel="icon" href="/static/favicon.png">
+<link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+
+<header class="masthead">
+  <div class="masthead-bar">
+    <span class="wordmark">
+      <img class="crest" src="/static/logo_menkorps.png" alt="">
+      <img class="crest crest-side" src="/static/logo_akpol.png" alt="">
+      LHP Akpol
+    </span>
+    <nav>
+      {% if user %}<span class="signed-in">{{ user.nama }}</span>{% endif %}
+      <a href="/bantuan">Bantuan</a>
+      <a href="/app">Susun laporan</a>
+      <a href="/logout">Keluar</a>
+    </nav>
+  </div>
+</header>
+
+<main class="sheet">
+  <h1 style="font-family:var(--display); font-weight:500; letter-spacing:.03em;
+             text-transform:uppercase; font-size:24px; margin-bottom:4px;">
+    Rekap penyusunan LHP
+  </h1>
+  <p class="note">
+    {%- if lingkup.tingkat or lingkup.kompi or lingkup.peleton %}
+      Lingkup:
+      {%- if lingkup.tingkat %} Tingkat {{ lingkup.tingkat }}{% endif -%}
+      {%- if lingkup.kompi %}, Kompi {{ lingkup.kompi }}{% endif -%}
+      {%- if lingkup.peleton %}, Peleton {{ lingkup.peleton }}{% endif -%}
+    {%- else %}
+      Lingkup belum ditetapkan, seluruh taruna ditampilkan.
+    {%- endif %}
+    &middot; Bulan {{ bulan }}
+  </p>
+  <hr class="rule2" style="margin:14px 0 24px;">
+
+  <div class="tally-strip">
+    <div class="tally-cell">
+      <div class="fig">{{ '%02d'|format(baris|length) }}</div>
+      <div class="cap">Taruna terdata</div>
+    </div>
+    <div class="tally-cell">
+      <div class="fig">{{ '%02d'|format(sudah) }}</div>
+      <div class="cap">Sudah menyusun</div>
+    </div>
+    <div class="tally-cell">
+      <div class="fig">{{ '%02d'|format(belum) }}</div>
+      <div class="cap">Belum menyusun</div>
+    </div>
+    <div class="tally-cell">
+      <div class="fig">{{ '%02d'|format(baris|sum(attribute='bulan_ini')) }}</div>
+      <div class="cap">Dokumen bulan ini</div>
+    </div>
+  </div>
+
+  <section class="panel">
+    <div class="filters">
+      <input type="search" id="cari" placeholder="Cari nama atau nomor akademi"
+             aria-label="Cari taruna">
+      <select id="saring" aria-label="Saring menurut keadaan">
+        <option value="">Semua</option>
+        <option value="belum">Belum menyusun</option>
+        <option value="sudah">Sudah menyusun</option>
+      </select>
+      <a class="btn btn-outline btn-sm" href="/rekap/unduh?bulan={{ bulan }}"
+         style="padding:8px 16px;">Unduh Excel</a>
+    </div>
+
+    {% if baris %}
+    <div class="scroll-x">
+      <table id="tabel">
+        <thead>
+          <tr>
+            <th>Nama</th><th>No. Akademi</th><th>Bulan ini</th>
+            <th>Total</th><th>Terakhir</th><th>Kegiatan bulan ini</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for b in baris %}
+          <tr data-cari="{{ (b.nama ~ ' ' ~ b.no_akademi ~ ' ' ~ b.username)|lower }}"
+              data-status="{{ 'sudah' if b.bulan_ini > 0 else 'belum' }}">
+            <td>{{ b.nama }}</td>
+            <td class="mono">{{ b.no_akademi }}</td>
+            <td class="num">
+              {% if b.bulan_ini > 0 %}{{ b.bulan_ini }}
+              {% else %}<span class="tag" style="background:#FBEFEF;color:#6E1119;">belum</span>{% endif %}
+            </td>
+            <td class="num">{{ b.total }}</td>
+            <td class="num">{% if b.terakhir %}{{ b.terakhir[:10] }}{% else %}&mdash;{% endif %}</td>
+            <td class="note">{{ b.kegiatan | join(', ') if b.kegiatan else '—' }}</td>
+          </tr>
+          {% endfor %}
+          <tr class="empty-row" id="kosong" hidden>
+            <td colspan="6">Tidak ada taruna yang cocok.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <p class="note">
+      Belum ada taruna terdata pada lingkup ini. Taruna baru muncul di sini
+      setelah menyusun dokumen pertamanya, karena satuannya diketahui dari
+      isian terakhirnya.
+    </p>
+    {% endif %}
+  </section>
+</main>
+
+
+{% include "_jejak.html" %}
+
+<script>
+const tabel = document.getElementById('tabel');
+if (tabel) {
+  const baris = [...tabel.querySelectorAll('tbody tr:not(.empty-row)')];
+  const kosong = document.getElementById('kosong');
+  const cari = document.getElementById('cari');
+  const saring = document.getElementById('saring');
+
+  function terap() {
+    const q = (cari.value || '').trim().toLowerCase();
+    const s = saring.value;
+    let tampil = 0;
+    baris.forEach(r => {
+      const ok = (!q || r.dataset.cari.includes(q)) &&
+                 (!s || r.dataset.status === s);
+      r.hidden = !ok;
+      if (ok) tampil++;
+    });
+    kosong.hidden = tampil !== 0;
+  }
+  cari.addEventListener('input', terap);
+  saring.addEventListener('change', terap);
+}
+</script>
+</body>
+</html>
