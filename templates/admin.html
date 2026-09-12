@@ -56,6 +56,52 @@
   </div>
 
   <section class="panel" style="margin-bottom:26px;">
+    <h2 class="panel-title">Cadangan akun</h2>
+    <hr class="rule2" style="margin:12px 0 18px;">
+
+    <p class="note" style="margin-bottom:18px;">
+      Simpan seluruh akun ke satu berkas, lalu pulihkan kapan pun diperlukan.
+      Berguna sebelum memperbarui aplikasi atau saat berpindah server.
+    </p>
+
+    <div class="row row-2" style="gap:26px;">
+      <div>
+        <h3 class="cadang-judul">Ekspor</h3>
+        <p class="note">
+          Mengunduh seluruh akun berikut sidik kata sandinya. Taruna tetap bisa
+          masuk dengan kata sandi lama setelah berkas ini dipulihkan.
+        </p>
+        <a class="btn btn-outline" href="/api/admin/ekspor-akun">Unduh cadangan</a>
+      </div>
+
+      <div>
+        <h3 class="cadang-judul">Impor</h3>
+        <p class="note">Pilih berkas cadangan hasil ekspor, lalu tentukan caranya.</p>
+
+        <input type="file" id="berkas-cadangan" accept=".json,application/json"
+               style="padding:8px; font-size:13.5px;">
+
+        <label for="mode-impor" style="margin-top:12px;">Cara memulihkan</label>
+        <select id="mode-impor">
+          <option value="gabung">Tambahkan yang belum ada, akun sekarang tidak diubah</option>
+          <option value="timpa">Timpa semuanya dengan isi berkas</option>
+        </select>
+
+        <div style="margin-top:14px;">
+          <button type="button" class="btn btn-solid" id="tombol-impor">Pulihkan akun</button>
+        </div>
+        <div id="hasil-impor" style="margin-top:14px;"></div>
+      </div>
+    </div>
+
+    <div class="notice" style="margin-top:20px;">
+      <strong>Berkas cadangan bersifat rahasia.</strong>
+      Siapa pun yang memilikinya dapat memindahkan seluruh akun ke tempat lain.
+      Simpan seperti Anda menyimpan daftar kata sandi, jangan dibagikan di grup.
+    </div>
+  </section>
+
+  <section class="panel" style="margin-bottom:26px;">
     <h2 class="panel-title">Pengguna</h2>
     <hr class="rule2" style="margin:12px 0 20px;">
 
@@ -197,6 +243,49 @@ async function deleteUser(uid, nama) {
   if (res.ok) document.querySelector('tr[data-uid="' + uid + '"]')?.remove();
   else alert('Akun tidak bisa dihapus.');
 }
+
+document.getElementById('tombol-impor').addEventListener('click', async () => {
+  const berkas = document.getElementById('berkas-cadangan').files[0];
+  const mode = document.getElementById('mode-impor').value;
+  const kotak = document.getElementById('hasil-impor');
+
+  if (!berkas) {
+    kotak.innerHTML = '<div class="notice notice-error">Pilih berkas cadangan dulu.</div>';
+    return;
+  }
+  const peringatan = mode === 'timpa'
+    ? 'TIMPA SEMUANYA?\n\nSeluruh akun yang ada sekarang akan diganti dengan isi berkas. ' +
+      'Akun yang tidak ada di berkas akan hilang.'
+    : 'Tambahkan akun dari berkas?\n\nAkun yang sudah ada tidak akan diubah.';
+  if (!confirm(peringatan)) return;
+
+  const tombol = document.getElementById('tombol-impor');
+  tombol.disabled = true;
+  tombol.innerHTML = '<span class="spinner"></span>Memulihkan';
+  kotak.innerHTML = '';
+
+  const fd = new FormData();
+  fd.append('berkas', berkas);
+  fd.append('mode', mode);
+
+  try {
+    const res = await fetch('/api/admin/impor-akun', { method: 'POST', body: fd });
+    const d = await res.json();
+    if (d.ok) {
+      kotak.innerHTML = '<div class="notice notice-ok">Selesai. ' +
+        d.ditambah + ' akun ditambahkan, ' +
+        (d.mode === 'timpa' ? d.diganti + ' diganti' : d.dilewati + ' dilewati karena sudah ada') +
+        '. Kini ada ' + d.total_sekarang + ' akun.</div>';
+      setTimeout(() => location.reload(), 2200);
+    } else {
+      kotak.innerHTML = '<div class="notice notice-error">' + d.error + '</div>';
+    }
+  } catch {
+    kotak.innerHTML = '<div class="notice notice-error">Server tidak terjangkau.</div>';
+  }
+  tombol.disabled = false;
+  tombol.textContent = 'Pulihkan akun';
+});
 
 async function aturPeran(uid, nama, peranSekarang) {
   const jadi = confirm('Jadikan ' + nama + ' sebagai PENGASUH?\n\n' +

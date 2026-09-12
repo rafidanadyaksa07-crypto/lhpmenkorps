@@ -545,3 +545,10 @@ td .mono, td.num { font-family: var(--mono); font-variant-numeric: tabular-nums;
 .tanya .jawab p { font-size: 15px; color: var(--graphite); }
 .tanya .jawab p:last-child { margin-bottom: 12px; }
 .tanya .jawab strong { color: var(--ink); }
+
+/* ── panel cadangan akun ──────────────────────────────────────── */
+.cadang-judul {
+  font-family: var(--display); font-weight: 500;
+  font-size: 14px; letter-spacing: .06em; text-transform: uppercase;
+  color: var(--ink); margin: 0 0 6px;
+}

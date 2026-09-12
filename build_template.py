@@ -10,8 +10,11 @@ Layout decisions (learned from real output that came out messy):
     justification stretched short names into "MUHAMMAD   RAFI   DANADYAKSA".
   * keep_with_next is set across the signature rows so the block is not
     split across pages, which previously left an almost-empty page.
-  * Placeholders are whole tokens ({{NAME}}) each in their own run, so
-    replacement never depends on ordering. See Devnotes.md.
+  * Placeholders are whole tokens ({{NAME}}) each in their own run, and every
+    final string is assembled BEFORE any replacement touches the document.
+    Never go back to replacing text fragments in sequence: a generic fragment
+    can run before a more specific one that still needs the original text,
+    silently corrupting the output.
 """
 from docx import Document
 from docx.shared import Pt, Cm, Inches

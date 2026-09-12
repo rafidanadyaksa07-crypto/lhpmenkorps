@@ -2,16 +2,18 @@
 """
 LHP AKPOL — free version.
 
-Design decisions (see Devnotes.md for the full reasoning trail from the
-previous paid iteration of this project):
+Design decisions:
   - No tokens, no payment, no gating. Anyone with an account can generate
     unlimited documents.
   - Login exists ONLY so usage can be attributed to a person for the admin
     activity log. Registration is instant self-serve (username + password),
     no email/Google verification required.
   - Every request that creates a document is logged to activity_log.json.
-  - users.json / activity_log.json / visitors.json live under data/ and are
+  - users.json / activity_log.json / visitors.json live under DATA_DIR and are
     written atomically (temp file + os.replace) to survive a crash mid-write.
+  - DATA_DIR follows the Railway volume when one is mounted. Without a volume
+    the folder is wiped on every redeploy and all accounts are lost, so
+    PENYIMPANAN_PERMANEN surfaces a warning in /health and the admin page.
 """
 import os
 import io
@@ -698,6 +700,117 @@ def admin_set_peran():
     } if peran == "pengasuh" else {}
     save_users(users)
     return jsonify({"ok": True})
+
+
+
+# ---------------------------------------------------------------------------
+# Cadangan akun: ekspor dan impor
+# ---------------------------------------------------------------------------
+# Kata sandi asli TIDAK pernah disimpan, jadi tidak bisa diekspor. Yang
+# diekspor adalah sidik acaknya (hash). Itu sudah cukup: setelah diimpor,
+# taruna tetap bisa masuk memakai kata sandi lama mereka.
+#
+# Berkas hasil ekspor bersifat rahasia. Siapa pun yang memilikinya bisa
+# memindahkan seluruh akun ke tempat lain. Simpan seperti menyimpan daftar
+# sandi.
+VERSI_CADANGAN = 1
+WAJIB_ADA = ("uid", "username", "password_hash")
+
+
+@app.route("/api/admin/ekspor-akun")
+@admin_required
+def admin_ekspor_akun():
+    users = load_users()
+    isi = {
+        "versi": VERSI_CADANGAN,
+        "dibuat": datetime.utcnow().isoformat() + "Z",
+        "jumlah_akun": len(users),
+        "akun": users,
+    }
+    buf = io.BytesIO(json.dumps(isi, indent=2, ensure_ascii=False).encode("utf-8"))
+    buf.seek(0)
+    nama = "cadangan_akun_" + date.today().isoformat() + ".json"
+    log_activity("admin", "ekspor_akun", {"jumlah": len(users)})
+    return send_file(buf, as_attachment=True, download_name=nama,
+                     mimetype="application/json")
+
+
+def _sah(akun):
+    """Periksa satu akun punya kolom wajib dan bertipe benar."""
+    if not isinstance(akun, dict):
+        return False
+    return all(isinstance(akun.get(k), str) and akun.get(k) for k in WAJIB_ADA)
+
+
+@app.route("/api/admin/impor-akun", methods=["POST"])
+@admin_required
+def admin_impor_akun():
+    berkas = request.files.get("berkas")
+    mode = request.form.get("mode", "gabung")     # gabung | timpa
+    if not berkas or not berkas.filename:
+        return jsonify({"ok": False, "error": "Berkas cadangan belum dipilih."}), 400
+    if mode not in ("gabung", "timpa"):
+        return jsonify({"ok": False, "error": "Mode tidak dikenal."}), 400
+
+    try:
+        isi = json.loads(berkas.read().decode("utf-8"))
+    except Exception:
+        return jsonify({"ok": False,
+                        "error": "Berkas tidak terbaca. Pastikan berkas JSON "
+                                 "hasil ekspor dari halaman ini."}), 400
+
+    if not isinstance(isi, dict) or not isinstance(isi.get("akun"), dict):
+        return jsonify({"ok": False,
+                        "error": "Isi berkas tidak sesuai. Pastikan berkas hasil "
+                                 "ekspor, bukan berkas lain."}), 400
+    if isi.get("versi") != VERSI_CADANGAN:
+        return jsonify({"ok": False,
+                        "error": f"Versi cadangan {isi.get('versi')} tidak cocok "
+                                 f"dengan versi {VERSI_CADANGAN} yang berlaku."}), 400
+
+    masuk = isi["akun"]
+    ditolak = [k for k, v in masuk.items() if not _sah(v)]
+    if ditolak:
+        return jsonify({"ok": False,
+                        "error": f"{len(ditolak)} akun tidak memiliki data lengkap "
+                                 f"dan seluruh impor dibatalkan.",
+                        "contoh": ditolak[:5]}), 400
+
+    sekarang = load_users()
+
+    # simpan keadaan sebelum impor, supaya bisa dikembalikan bila keliru
+    if sekarang:
+        cadang = os.path.join(
+            DATA_DIR, "users_sebelum_impor_" +
+            datetime.utcnow().strftime("%Y%m%d_%H%M%S") + ".json")
+        try:
+            _atomic_write(cadang, sekarang)
+        except Exception as e:
+            app.logger.warning("gagal menyimpan keadaan sebelum impor: %s", e)
+
+    if mode == "timpa":
+        hasil = dict(masuk)
+        ditambah = len(masuk)
+        dilewati = 0
+        diganti = len(set(masuk) & set(sekarang))
+    else:
+        hasil = dict(sekarang)
+        ditambah = dilewati = 0
+        for uid, akun in masuk.items():
+            if uid in hasil:
+                dilewati += 1
+            else:
+                hasil[uid] = akun
+                ditambah += 1
+        diganti = 0
+
+    save_users(hasil)
+    log_activity("admin", "impor_akun",
+                 {"mode": mode, "ditambah": ditambah,
+                  "dilewati": dilewati, "diganti": diganti})
+    return jsonify({"ok": True, "mode": mode, "ditambah": ditambah,
+                    "dilewati": dilewati, "diganti": diganti,
+                    "total_sekarang": len(hasil)})
 
 
 @app.route("/admin")
