@@ -185,10 +185,28 @@ def record_visit():
 # ---------------------------------------------------------------------------
 # Auth helpers
 # ---------------------------------------------------------------------------
+ADMIN_UID = "__admin__"
+
+
 def current_user():
     uid = session.get("uid")
     if not uid:
         return None
+
+    # Sesi pengelola bukan akun biasa dan tidak ada di users.json. Tanpa
+    # perlakuan khusus, penjaga halaman menganggapnya sesi kedaluwarsa lalu
+    # MENGHAPUS sesinya -- akibatnya pengelola yang menekan "Susun laporan"
+    # ikut terlempar keluar dari halaman pengelola. Di sini dibuatkan akun
+    # bayangan supaya pengelola bisa memakai formulir seperti taruna.
+    if uid == ADMIN_UID and session.get("role") == "admin":
+        return {
+            "uid": ADMIN_UID,
+            "username": "admin",
+            "nama": "Pengelola",
+            "role": "admin",
+            "defaults": {},
+        }
+
     users = load_users()
     return users.get(uid)
 
@@ -329,7 +347,7 @@ def login_admin():
     username = request.form.get("username") or ""
     password = request.form.get("password") or ""
     if username == ADMIN_USERNAME and password == ADMIN_PASSWORD:
-        session["uid"] = "__admin__"
+        session["uid"] = ADMIN_UID
         session["role"] = "admin"
         return redirect(url_for("admin_panel"))
     return render_template("admin_login.html", error="Username atau password admin salah.")
@@ -504,7 +522,7 @@ def api_generate():
         # document starts mostly filled in. Kegiatan/tanggal/waktu/tempat are
         # deliberately NOT remembered -- they differ every time.
         users = load_users()
-        if user["uid"] in users:
+        if user["uid"] != ADMIN_UID and user["uid"] in users:
             users[user["uid"]]["defaults"] = {
                 "nama_taruna": form["nama_taruna"],
                 "no_akademi": form["no_akademi"],

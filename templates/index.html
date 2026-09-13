@@ -18,7 +18,8 @@
       </span>
     <nav>
       <span class="signed-in">{{ user.nama }}</span>
-      {% if user.role == 'pengasuh' %}<a href="/rekap">Rekap</a>{% endif %}
+      {% if user.role in ['pengasuh', 'admin'] %}<a href="/rekap">Rekap</a>{% endif %}
+      {% if user.role == 'admin' %}<a href="/admin">Pengelola</a>{% endif %}
       <a href="/bantuan">Bantuan</a>
       <a href="/logout">Keluar</a>
     </nav>
@@ -236,6 +237,122 @@
 {% include "_jejak.html" %}
 
 <script>
+/* ══ kecilkan foto di peramban sebelum diunggah ══════════════════
+   Foto ponsel bisa 3-5 MB. Mengunggahnya apa adanya lambat sekali di
+   jaringan seluler. Di sini foto dikecilkan lebih dulu di peramban,
+   sehingga yang terkirim tinggal beberapa ratus kilobita.
+
+   Pengecilan lewat canvas MENGHAPUS data EXIF, termasuk tanggal
+   pemotretan. Karena itu tanggalnya dibaca dulu dari berkas asli,
+   disimpan di sini, baru fotonya dikecilkan. */
+
+function bacaTanggalExifDariBuffer(buf) {
+  const dv = new DataView(buf);
+  if (dv.byteLength < 4 || dv.getUint16(0) !== 0xFFD8) return null;
+
+  let off = 2;
+  while (off + 4 < dv.byteLength) {
+    const penanda = dv.getUint16(off);
+    if ((penanda & 0xFF00) !== 0xFF00) return null;
+    if (penanda === 0xFFDA) return null;                 // mulai data gambar
+    const panjang = dv.getUint16(off + 2);
+
+    if (penanda === 0xFFE1 && dv.getUint32(off + 4) === 0x45786966) {
+      const tiff = off + 10;
+      const kecil = dv.getUint16(tiff) === 0x4949;
+      const u16 = p => dv.getUint16(p, kecil);
+      const u32 = p => dv.getUint32(p, kecil);
+      if (u16(tiff + 2) !== 0x2A) return null;
+
+      const teksDi = (p, n) => {
+        let s = '';
+        for (let i = 0; i < n && p + i < dv.byteLength; i++) {
+          const c = dv.getUint8(p + i);
+          if (c === 0) break;
+          s += String.fromCharCode(c);
+        }
+        return s;
+      };
+
+      // Tag tanggal bisa berada di IFD0 maupun di blok Exif, tergantung
+      // aplikasi yang menulisnya. Keduanya diperiksa.
+      const kandidat = {};
+      const telusuri = (ifd) => {
+        if (!ifd || ifd + 2 > dv.byteLength) return null;
+        const n = u16(ifd);
+        if (n > 512) return null;
+        let pointerExif = null;
+        for (let i = 0; i < n; i++) {
+          const e = ifd + 2 + i * 12;
+          const tag = u16(e);
+          if (tag === 0x8769) pointerExif = tiff + u32(e + 8);
+          if (tag === 0x9003 || tag === 0x9004 || tag === 0x0132) {
+            const jml = u32(e + 4);
+            const teks = jml <= 4 ? teksDi(e + 8, jml) : teksDi(tiff + u32(e + 8), Math.min(jml, 32));
+            if (!(tag in kandidat)) kandidat[tag] = teks;
+          }
+        }
+        return pointerExif;
+      };
+
+      const ifd0 = tiff + u32(tiff + 4);
+      const pointerExif = telusuri(ifd0);
+      telusuri(pointerExif);
+
+      for (const tag of [0x9003, 0x9004, 0x0132]) {       // urutan keandalan
+        const teks = kandidat[tag];
+        if (!teks) continue;
+        const m = teks.match(/^(\d{4})[:\-](\d{2})[:\-](\d{2})[ T](\d{2}):(\d{2})/);
+        if (m) return { tanggal: `${m[1]}-${m[2]}-${m[3]}`, waktu: `${m[4]}:${m[5]}` };
+      }
+      return null;
+    }
+    off += 2 + panjang;
+  }
+  return null;
+}
+
+const tanggalFoto = new WeakMap();   // berkas hasil kecil -> tanggal dari aslinya
+let hematTotal = 0;                  // berapa bita yang berhasil dihemat
+
+async function bacaTanggalExif(file) {
+  try {
+    const potong = file.slice(0, 256 * 1024);          // header saja, tidak seluruh berkas
+    return bacaTanggalExifDariBuffer(await potong.arrayBuffer());
+  } catch { return null; }
+}
+
+async function kecilkanGambar(file, maks = 1600, mutu = 0.85) {
+  if (!file.type.startsWith('image/')) return file;
+  try {
+    // from-image: putaran foto ikut dipanggang, agar tidak miring di dokumen
+    const bmp = await createImageBitmap(file, { imageOrientation: 'from-image' });
+    const sisiTerpanjang = Math.max(bmp.width, bmp.height);
+
+    if (sisiTerpanjang <= maks && file.size <= 900 * 1024) {
+      bmp.close && bmp.close();
+      return file;                                     // sudah cukup kecil
+    }
+    const skala = Math.min(1, maks / sisiTerpanjang);
+    const l = Math.round(bmp.width * skala);
+    const t = Math.round(bmp.height * skala);
+
+    const kanvas = document.createElement('canvas');
+    kanvas.width = l; kanvas.height = t;
+    kanvas.getContext('2d').drawImage(bmp, 0, 0, l, t);
+    bmp.close && bmp.close();
+
+    const blob = await new Promise(r => kanvas.toBlob(r, 'image/jpeg', mutu));
+    if (!blob || blob.size >= file.size) return file;   // tidak ada untungnya
+
+    hematTotal += file.size - blob.size;
+    const nama = file.name.replace(/\.(heic|heif|png|webp|jpeg|jpg)$/i, '') + '.jpg';
+    return new File([blob], nama, { type: 'image/jpeg', lastModified: file.lastModified });
+  } catch {
+    return file;                                        // HEIC yang tak terbaca, dll
+  }
+}
+
 /* ══ foto ══════════════════════════════════════════════════════
    Files are held in a JS array, so choosing again ADDS to the set
    instead of replacing it, and single photos can be removed.     */
@@ -253,19 +370,33 @@ const sizeOf = b =>
   : b < 1048576 ? (b/1024).toFixed(0) + ' KB'
   : (b/1048576).toFixed(1) + ' MB';
 
-function addFiles(list) {
-  let skipped = 0;
+async function addFiles(list) {
+  let dilewati = 0;
+  const antre = [];
   for (const f of list) {
-    if (!f.type.startsWith('image/')) { skipped++; continue; }
-    if (!picked.some(x => x.name === f.name && x.size === f.size)) picked.push(f);
+    if (!f.type.startsWith('image/')) { dilewati++; continue; }
+    if (picked.some(x => x.name === f.name && x.size === f.size)) continue;
+    antre.push(f);
   }
-  renderPhotos();
-  if (skipped) showMsg('error', skipped + ' berkas dilewati karena bukan gambar.');
-  // pindai sekali secara otomatis saat foto pertama masuk
-  if (!sudahDipindai && picked.length) {
-    sudahDipindai = true;
-    pindaiFoto();
+  if (!antre.length) {
+    if (dilewati) showMsg('error', dilewati + ' berkas dilewati karena bukan gambar.');
+    return;
   }
+
+  const label = document.getElementById('upload-count');
+  summary.hidden = false;
+  label.textContent = 'Menyiapkan ' + antre.length + ' foto...';
+
+  for (const asli of antre) {
+    const tgl = await bacaTanggalExif(asli);    // dibaca SEBELUM dikecilkan
+    const kecil = await kecilkanGambar(asli);
+    if (tgl) tanggalFoto.set(kecil, tgl);
+    picked.push(kecil);
+    renderPhotos();
+  }
+
+  if (dilewati) showMsg('error', dilewati + ' berkas dilewati karena bukan gambar.');
+  if (!sudahDipindai && picked.length) { sudahDipindai = true; pindaiFoto(); }
 }
 
 function renderPhotos() {
@@ -302,8 +433,9 @@ function renderPhotos() {
   summary.hidden = !has;
   orderHint.hidden = !has;
   if (has) {
-    countLabel.textContent =
-      picked.length + ' foto, ' + sizeOf(picked.reduce((s, f) => s + f.size, 0));
+    const total = picked.reduce((s, f) => s + f.size, 0);
+    countLabel.textContent = picked.length + ' foto, ' + sizeOf(total) +
+      (hematTotal > 0 ? '  (dihemat ' + sizeOf(hematTotal) + ')' : '');
   }
 }
 
@@ -323,7 +455,7 @@ fileInput.addEventListener('change', e => { addFiles(e.target.files); fileInput.
 }));
 dropzone.addEventListener('drop', e => addFiles(e.dataTransfer.files));
 document.getElementById('clear-photos').addEventListener('click', () => {
-  picked.length = 0; renderPhotos();
+  picked.length = 0; hematTotal = 0; renderPhotos();
   document.getElementById('scan-box').hidden = true;
 });
 
@@ -345,51 +477,42 @@ function tanggalTerbaca(iso) {
 
 async function pindaiFoto() {
   if (!picked.length) return;
-  scanBox.hidden = false;
-  scanBox.innerHTML = '<div class="notice"><span class="spinner" ' +
-    'style="border-color:rgba(23,20,18,.25);border-top-color:#A31621"></span>' +
-    'Membaca tanggal pada foto...</div>';
 
-  const fd = new FormData();
-  picked.slice(0, 4).forEach(f => fd.append('foto', f));
-
-  try {
-    const res = await fetch('/api/scan-photo', { method: 'POST', body: fd });
-    const d = await res.json();
-
-    if (d.found) {
-      const jam = d.waktu ? d.waktu.replace(':', '.') + ' WIB' : 'jam tidak terbaca';
-      scanBox.innerHTML =
-        '<div class="notice notice-ok">' +
-          '<strong>Terbaca dari foto:</strong> ' + tanggalTerbaca(d.tanggal) +
-          ', ' + jam + ' <span class="note">(sumber: ' + d.sumber + ')</span><br>' +
-          '<button type="button" class="linkish" id="scan-pakai">Gunakan tanggal ini</button>' +
-          '&nbsp;&nbsp;<button type="button" class="linkish" id="scan-tutup">Abaikan</button>' +
-        '</div>';
-      document.getElementById('scan-pakai').addEventListener('click', () => {
-        document.getElementById('tanggal').value = d.tanggal;
-        if (d.waktu) document.getElementById('waktu').value = d.waktu;
-        if (d.tempat && !document.getElementById('tempat').value)
-          document.getElementById('tempat').value = d.tempat;
-        ['tanggal','waktu','tempat'].forEach(id => clearError(document.getElementById(id)));
-        updateProgress();
-        scanBox.innerHTML = '<div class="notice notice-ok">Tanggal dan jam sudah diisi. ' +
-          'Periksa kembali, dan ubah sendiri bila keliru.</div>';
-      });
-      document.getElementById('scan-tutup').addEventListener('click', () => {
-        scanBox.hidden = true;
-      });
-    } else {
-      scanBox.innerHTML = '<div class="notice">' + (d.pesan || 'Tanggal tidak ditemukan.') +
-        ' <button type="button" class="linkish" id="scan-tutup2">Tutup</button></div>';
-      document.getElementById('scan-tutup2').addEventListener('click', () => {
-        scanBox.hidden = true;
-      });
-    }
-  } catch {
-    scanBox.innerHTML = '<div class="notice notice-error">Foto gagal dipindai. ' +
-      'Isi tanggal dan jam secara manual.</div>';
+  // Tanggal sudah dibaca saat foto dipilih, jadi tidak perlu mengunggah
+  // apa pun ke server. Hasilnya muncul seketika.
+  let temuan = null;
+  for (const f of picked) {
+    const t = tanggalFoto.get(f);
+    if (t) { temuan = t; break; }
   }
+
+  scanBox.hidden = false;
+  if (!temuan) {
+    scanBox.innerHTML = '<div class="notice">Tanggal tidak ditemukan pada foto. ' +
+      'Foto yang dibagikan lewat WhatsApp atau hasil tangkapan layar biasanya ' +
+      'kehilangan data ini. Isi tanggal dan jam secara manual. ' +
+      '<button type="button" class="linkish" id="scan-tutup2">Tutup</button></div>';
+    document.getElementById('scan-tutup2').addEventListener('click', () => { scanBox.hidden = true; });
+    return;
+  }
+
+  const jam = temuan.waktu ? temuan.waktu.replace(':', '.') + ' WIB' : 'jam tidak terbaca';
+  scanBox.innerHTML =
+    '<div class="notice notice-ok">' +
+      '<strong>Terbaca dari foto:</strong> ' + tanggalTerbaca(temuan.tanggal) +
+      ', ' + jam + ' <span class="note">(sumber: data foto)</span><br>' +
+      '<button type="button" class="linkish" id="scan-pakai">Gunakan tanggal ini</button>' +
+      '&nbsp;&nbsp;<button type="button" class="linkish" id="scan-tutup">Abaikan</button>' +
+    '</div>';
+  document.getElementById('scan-pakai').addEventListener('click', () => {
+    document.getElementById('tanggal').value = temuan.tanggal;
+    if (temuan.waktu) document.getElementById('waktu').value = temuan.waktu;
+    ['tanggal','waktu'].forEach(id => clearError(document.getElementById(id)));
+    updateProgress();
+    scanBox.innerHTML = '<div class="notice notice-ok">Tanggal dan jam sudah diisi. ' +
+      'Periksa kembali, dan ubah sendiri bila keliru.</div>';
+  });
+  document.getElementById('scan-tutup').addEventListener('click', () => { scanBox.hidden = true; });
 }
 
 document.getElementById('scan-again').addEventListener('click', () => {
